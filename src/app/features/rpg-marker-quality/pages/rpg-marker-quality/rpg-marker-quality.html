@@ -1,0 +1,175 @@
+<input #fileInput type="file" multiple (change)="onFileChange($event)" style="display: none;" />
+
+<div class="container">
+    <button (click)="fileInput.click()">Відкрити файл</button>
+    <button (click)="saveFile()">Cкачати</button>
+    <button [disabled]="!files()?.length" (click)="copyToClipboard()">
+        <span class="icon">📋</span> Копіювати {{files()?.length}}
+    </button>
+</div>
+
+@if (eventList().length) {
+<mat-form-field>
+    <mat-label>Events</mat-label>
+    <mat-select [value]="selectedEventId()" (selectionChange)="onEventSelected($event)">
+        @for (event of eventList(); track event.id) {
+        <mat-option [value]="event.id">
+            {{ event.id }} - {{ event.name }}
+        </mat-option>
+        }
+    </mat-select>
+</mat-form-field>
+
+@let event = eventList()[selectedEventId()];
+@if (event) {
+<mat-form-field>
+    <mat-label>Pages</mat-label>
+    <mat-select [value]="selectedPageId()" (selectionChange)="onPageSelected($event)">
+        @for (page of event.pages; track $index) {
+        <mat-option [value]="$index">
+            {{ $index }}
+        </mat-option>
+        }
+    </mat-select>
+</mat-form-field>
+}
+<div class="main-layout">
+
+    <div class="actions-panel">
+        <div class="panel-header">
+            <h3>Швидкі дії та ШІ-корекція</h3>
+            <span class="panel-subtitle">Інструменти для покращення тексту</span>
+        </div>
+
+        <div class="actions-list">
+            <div class="action-item">
+                <div class="action-info">
+                    <span class="action-title">Фемінітиви / Зміна роду</span>
+                    <p class="action-description">Адаптувати закінчення дієслів та прикметників для жіночого роду
+                        (напр.,
+                        "наробив" ➔ "наробила").</p>
+                </div>
+                <button class="action-btn secondary-btn">Змінити рід</button>
+            </div>
+
+            <div class="action-item">
+                <div class="action-info">
+                    <span class="action-title">Додати емоційності (ШІ)</span>
+                    <p class="action-description">Зробити репліку більш експресивною відповідно до поточної сцени (гнів,
+                        радість, сум).</p>
+                </div>
+                <button class="action-btn magic-btn">Оживити</button>
+            </div>
+
+            <div class="action-item">
+                <div class="action-info">
+                    <span class="action-title">Природний діалог</span>
+                    <p class="action-description">Прибрати кальку з англійської/японської, зробити фразу більш звичною
+                        для
+                        українського гравця.</p>
+                </div>
+                <button class="action-btn" (click)="translateToNaturalDialogue()">Художній переклад</button>
+            </div>
+
+            <div class="action-item">
+                <div class="action-info">
+                    <span class="action-title">Перевірити обмеження RPG Maker</span>
+                    <p class="action-description">Валідація спеціальних тегів (`\V[n]`, `\N[n]`, `\C[n]`) та довжини
+                        рядка,
+                        щоб текст не вилазив за межі вікна.</p>
+                </div>
+                <button class="action-btn code-btn" disabled>Перевірити теги</button>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="actions-panel">
+        <div class="panel-header">
+            <h3>Швидкі дії та ШІ-корекція</h3>
+            <span class="panel-subtitle">Інструменти для покращення тексту</span>
+        </div>
+
+        <div class="actions-list">
+            <div class="action-item">
+                <div class="action-info">
+                    <span class="action-title">Фемінітиви / Зміна роду</span>
+                    <p class="action-description">Адаптувати закінчення дієслів та прикметників для жіночого роду
+                        (напр.,
+                        "наробив" ➔ "наробила").</p>
+                </div>
+                <button class="action-btn secondary-btn">Змінити рід</button>
+            </div>
+
+            <div class="action-item">
+                <div class="action-info">
+                    <span class="action-title">Додати емоційності (ШІ)</span>
+                    <p class="action-description">Зробити репліку більш експресивною відповідно до поточної сцени (гнів,
+                        радість, сум).</p>
+                </div>
+                <button class="action-btn magic-btn">Оживити</button>
+            </div>
+
+            <div class="action-item">
+                <div class="action-info">
+                    <span class="action-title">Природний діалог</span>
+                    <p class="action-description">Прибрати кальку з англійської/японської, зробити фразу більш звичною
+                        для
+                        українського гравця.</p>
+                </div>
+                <button class="action-btn">Художній переклад</button>
+            </div>
+
+            <div class="action-item">
+                <div class="action-info">
+                    <span class="action-title">Перевірити обмеження RPG Maker</span>
+                    <p class="action-description">Валідація спеціальних тегів (`\V[n]`, `\N[n]`, `\C[n]`) та довжини
+                        рядка,
+                        щоб текст не вилазив за межі вікна.</p>
+                </div>
+                <button class="action-btn code-btn" disabled>Перевірити теги</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@let page = event.pages[selectedPageId()];
+@if (page) {
+<div class="main-layout">
+    <div class="preview">
+        @for (item of page.list; track $index) {
+        <div class="preview-line" [ngClass]="{
+          'line-avatar': item.type === LineType.System && item.code === 101 && item.parameters[0] !== '',
+          'line-system': item.type === LineType.System,
+          'line-name': item.type === LineType.Name,
+          'line-message': item.type === LineType.Message,
+          'line-other': item.type === LineType.Other
+      }">
+            @switch(item.type) {
+            @case(LineType.System) {
+            @if (item.code === 101 && item.parameters[0] !== '') {
+            <div class="avatar"></div>
+            } @else {
+            {{item.parameters[0]}}
+            }
+            }
+            @case(LineType.Name) {
+            {{item.parameters[0]}}
+            }
+            @case(LineType.Message) {
+            {{item.parameters[0]}}
+            }
+            @case(LineType.Other) {
+            {{item.parameters[0]}}
+            }
+            }
+        </div>
+        }
+    </div>
+
+    <app-rpg-marker-quality-editor [lines]="page.list" />
+</div>
+
+}
+}

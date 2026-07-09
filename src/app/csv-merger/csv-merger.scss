@@ -1,0 +1,356 @@
+:host {
+    display: block;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+    padding: 2rem;
+    min-height: 100vh;
+}
+
+/* Контейнер */
+.upload-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: #242424;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.header-zone {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid #333;
+    padding-bottom: 1rem;
+}
+
+h2 {
+    margin: 0;
+    color: #fff;
+    font-weight: 600;
+}
+
+/* Кнопки */
+.btn {
+    padding: 0.6rem 1.2rem;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.btn-primary {
+    background-color: #3b82f6;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #2563eb;
+}
+
+.btn-secondary {
+    background-color: #4b5563;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #374151;
+}
+
+.btn-outline {
+    background-color: transparent;
+    border: 1px solid #4b5563;
+    color: #d1d5db;
+}
+
+.btn-outline:hover {
+    background-color: #374151;
+    color: white;
+}
+
+.btn-success {
+    background-color: #10b981;
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: #059669;
+}
+
+.btn-danger {
+    background-color: #ef4444;
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #dc2626;
+}
+
+.btn-ai {
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    color: white;
+    font-weight: 600;
+}
+
+.btn-ai:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.btn-sm {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+}
+
+/* Зона завантаження */
+.file-input-wrapper {
+    border: 2px dashed #4b5563;
+    border-radius: 8px;
+    padding: 2.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+    background: #1e1e1e;
+}
+
+.file-input-wrapper:hover {
+    border-color: #3b82f6;
+    background: #252529;
+}
+
+.upload-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.upload-icon {
+    font-size: 2.5rem;
+}
+
+.label-text {
+    font-size: 1.1rem;
+    color: #9ca3af;
+}
+
+/* Тулбари та Налаштування */
+.toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+    padding: 1rem;
+    background: #1e1e1e;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.settings-bar {
+    border-left: 4px solid #6366f1;
+}
+
+.action-bar {
+    justify-content: space-between;
+}
+
+.toolbar .group {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+/* Групи інпутів */
+.input-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.input-group label {
+    font-size: 0.85rem;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.cell-input {
+    background: #2d2d2d;
+    border: 1px solid #444;
+    color: #fff;
+    padding: 0.4rem 0.6rem;
+    border-radius: 4px;
+    width: 70px;
+    outline: none;
+    text-align: center;
+}
+
+.cell-input:focus {
+    border-color: #3b82f6;
+}
+
+.chunk-counter {
+    font-family: monospace;
+    background: #2d2d2d;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    color: #a855f7;
+    font-weight: bold;
+}
+
+/* Обгортка таблиці */
+.table-wrapper {
+    background: #1e1e1e;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid #333;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* Зона штучного інтелекту та тексту */
+.ai-translation-zone {
+    background: #25233a;
+    border: 1px solid #4338ca;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1.5rem;
+}
+
+.ai-actions {
+    background: transparent;
+    padding: 0 0 1rem 0;
+    border-bottom: 1px solid #3c3863;
+}
+
+.textarea-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.textarea-label {
+    font-size: 0.85rem;
+    color: #a5b4fc;
+    font-weight: 500;
+}
+
+textarea {
+    width: 100%;
+    background: #13121f;
+    border: 1px solid #3c3863;
+    color: #e0e0ff;
+    padding: 0.75rem;
+    border-radius: 6px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.9rem;
+    resize: vertical;
+    box-sizing: border-box;
+}
+
+textarea:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+/* Помилки та Порожні стани */
+.error-message {
+    background-color: rgba(239, 68, 68, 0.1);
+    border: 1px solid #ef4444;
+    color: #fca5a5;
+    padding: 1rem;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #6b7280;
+}
+
+.empty-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+/* ==========================================================================
+   НОВІ СТИЛІ ДЛЯ ДВОХ ТАБЛИЦЬ ТА ДВОХ ЗАВАНТАЖЕНЬ (Додай до кінця файлу)
+   ========================================================================== */
+
+/* Розділення кнопок завантаження файлів на 2 колонки */
+.upload-split-zone {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+
+    .file-input-wrapper {
+        flex: 1;
+        /* Робить обидві зони завантаження однаковими за шириною */
+        padding: 1.5rem;
+        /* Трохи менший падінг, щоб вони гарно ставали поруч */
+    }
+}
+
+/* Кастомний тулбар для налаштувань мапінгу */
+.mapping-bar {
+    border-left: 4px solid #10b981;
+    /* Зелений акцент для операції мерджу */
+    display: flex;
+    justify-content: flex-start;
+    gap: 2rem;
+}
+
+/* Контейнер для розташування двох таблиць поруч */
+.tables-split-container {
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+    margin-top: 1.5rem;
+
+    .table-section {
+        flex: 1;
+        min-width: 0;
+        /* Важливо для flex-елементів з таблицями всередині, щоб не ламався overflow */
+
+        h3 {
+            margin: 0 0 0.75rem 0;
+            font-size: 1rem;
+            color: #9ca3af;
+            font-weight: 500;
+        }
+    }
+}
+
+/* Модифікація для обмеження висоти таблиць та скролу всередині */
+.table-wrapper {
+    max-height: 550px;
+    /* Трохи збільшив, оскільки тепер вони компактніші та стоять поруч */
+    overflow-x: auto;
+    /* Горизонтальний скрол, якщо колонок у CSV багато */
+    overflow-y: auto;
+    /* Вертикальний скрол для великої кількості рядків */
+}
+
+/* Адаптивність: якщо екран замалий, розгортаємо в одну колонку */
+@media (max-width: 992px) {
+
+    .upload-split-zone,
+    .tables-split-container {
+        flex-direction: column;
+    }
+}

@@ -1,0 +1,84 @@
+<div class="upload-container">
+    <div class="header-zone">
+        <h2>Unity CSV Column Merger</h2>
+        <div>
+            <button class="btn btn-primary" [disabled]="!modifiedCsvContent().length" (click)="exportMergedFile()">
+                <span class="icon">💾</span> Експортувати результат
+            </button>
+            <button class="btn btn-secondary" (click)="clearAll()">Очистити все</button>
+        </div>
+    </div>
+
+    <div class="upload-split-zone">
+        <div class="file-input-wrapper" (click)="sourceFileChange.click()">
+            <input #sourceFileChange type="file" (change)="onSourceFileChange($event)" style="display: none;" />
+            <div class="upload-content">
+                <span class="upload-icon">📁</span>
+                <span class="label-text">
+                    {{ sourceFileName() ? sourceFileName() : '1. Виберіть початковий файл (Source)...' }}
+                </span>
+            </div>
+        </div>
+
+        <div class="file-input-wrapper" (click)="targetFileChange.click()">
+            <input #targetFileChange type="file" (change)="onTargetFileChange($event)" style="display: none;" />
+            <div class="upload-content">
+                <span class="upload-icon">📁</span>
+                <span class="label-text">
+                    {{ targetFileName() ? targetFileName() : '2. Виберіть змінений файл (Target)...' }}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div *ngIf="error()" class="error-message">
+        <span class="icon">⚠️</span> {{ error() }}
+    </div>
+
+    <div *ngIf="sourceCsvContent().length > 0 && targetCsvContent().length > 0"
+        class="toolbar settings-bar mapping-bar">
+        <div class="input-group">
+            <label for="sourceColumn">Source Column Index (з 1-ї таблиці)</label>
+            <input type="number" [(ngModel)]="sourceColumnIndex" class="cell-input" id="sourceColumn" min="0" />
+        </div>
+
+        <div class="input-group">
+            <label for="targetColumn">Target Column Index (куди вставити в 2-гу)</label>
+            <input type="number" [(ngModel)]="targetColumnIndex" class="cell-input" id="targetColumn" min="0" />
+        </div>
+
+        <button class="btn btn-ai" (click)="mergeColumns()">
+            ⚡ Перемістити колонку
+        </button>
+    </div>
+
+    <div class="tables-split-container" *ngIf="sourceCsvContent().length > 0 || targetCsvContent().length > 0">
+
+        <div class="table-section" *ngIf="sourceCsvContent().length > 0">
+            <h3>Таблиця 1: Початкові дані (Source)</h3>
+            <div class="table-wrapper">
+                <app-translate-table [data]="sourceCsvContent()" [original]="sourceCsvContent()"
+                    [headerCells]="sourceHeaders()" [sourceColIndex]="sourceColumnIndex"
+                    [targetColIndex]="targetColumnIndex" (dataChange)="sourceCsvContent.set($event)">
+                </app-translate-table>
+            </div>
+        </div>
+
+        <div class="table-section" *ngIf="targetCsvContent().length > 0">
+            <h3>Таблиця 2: Змінений файл (Target результат)</h3>
+            <div class="table-wrapper">
+                <app-translate-table [data]="modifiedCsvContent().length ? modifiedCsvContent() : targetCsvContent()"
+                    [original]="modifiedCsvContent().length ? modifiedCsvContent() : targetCsvContent()"
+                    [headerCells]="targetHeaders()" [sourceColIndex]="sourceColumnIndex"
+                    [targetColIndex]="targetColumnIndex" (dataChange)="onTargetDataChange($event)">
+                </app-translate-table>
+            </div>
+        </div>
+
+    </div>
+
+    <div *ngIf="sourceCsvContent().length === 0 && targetCsvContent().length === 0 && !error()" class="empty-state">
+        <div class="empty-icon">📊</div>
+        <p>Завантажте обидва CSV файли, щоб розпочати заміну колонок</p>
+    </div>
+</div>

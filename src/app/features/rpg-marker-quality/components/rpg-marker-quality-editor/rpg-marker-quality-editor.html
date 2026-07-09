@@ -1,0 +1,68 @@
+<div class="editable">
+    @for (item of lines(); track $index) {
+    <div class="edit-line" [class.has-variants]="item.type === LineType.Message && item.variants">
+
+        @switch(item.type) {
+        @case(LineType.Name) {
+        <span class="label">Name:</span>
+        <input type="text" class="input-name" [(ngModel)]="item.parameters[0]">
+        }
+
+        @case(LineType.Message) {
+        <div class="message-container">
+            <div class="main-input-row">
+                <span class="label">Msg:</span>
+                <textarea class="input-message input-message-main" rows="2" [(ngModel)]="item.parameters[0]"></textarea>
+            </div>
+
+            <!-- Блок варіантів перекладу (якщо вони існують в об'єкті) -->
+            @if (item.variants) {
+            <div class="variants-row">
+
+
+                <div class="variant-box variant-left">
+                    <textarea class="input-message" rows="2" [(ngModel)]="item.variants[Gemma]"></textarea>\
+                    @if (item.variants[Gemma]) {
+                    <button class="apply-btn" title="Застосувати цей варіант"
+                        (click)="selectVariant(item, Gemma)">➔</button>
+                    } @else{
+                    <button class="apply-btn" title="Спробувати ще раз"
+                        (click)="onGenerateVariants(item.id,Gemma)">🔄</button>
+                    }
+                </div>
+
+
+                <div class="variant-box variant-right">
+                    <textarea class="input-message" rows="2" [(ngModel)]="item.variants[Uncensored]"></textarea>
+                    @if (item.variants[Uncensored]) {
+                    <button class="apply-btn" title="Застосувати цей варіант"
+                        (click)="selectVariant(item, Uncensored)">➔</button>
+                    } @else {
+                    <button class="apply-btn" title="Спробувати ще раз"
+                        (click)="onGenerateVariants(item.id,Uncensored)">🔄</button>
+                    }
+                </div>
+
+            </div>
+            }
+        </div>
+        }
+
+        @case(LineType.Other) {
+        <input type="text" [(ngModel)]="item.parameters[0]">
+        }
+
+        @case(LineType.System) {
+        @if (item.code === 101) {
+        <div class="avatar-mini">Аватар змінився</div>
+        }
+        <input type="text" [(ngModel)]="item.parameters[0]">
+        }
+
+        @default {
+        <input type="text" [(ngModel)]="item.parameters[0]">
+        }
+        }
+    </div>
+    }
+</div>

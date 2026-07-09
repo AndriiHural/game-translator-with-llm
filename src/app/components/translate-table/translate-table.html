@@ -1,0 +1,27 @@
+<table class="csv-table">
+    <thead>
+        <tr>
+            @for (headerCell of headerCells(); track $index) {
+            <th>{{ headerCell }}</th>
+            }
+            <th class="actions-header">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @for (row of data(); track rowIndex; let rowIndex = $index) {
+        <tr>
+            @for (cell of row; track colIndex; let colIndex = $index) {
+            <td [ngClass]="{ 'edited': original()[rowIndex]?.[sourceColIndex()] !== cell }">
+                <input #cellInput type="text" [value]="cell" (input)="onCellChange(rowIndex, colIndex, cellInput.value)"
+                    class="table-cell-input" />
+            </td>
+            }
+            <td class="action-cell">
+                <button class="btn-retry" (click)="retryTranslate(rowIndex)" title="Retry translation for this row">
+                    🔄 <span class="btn-text">Retry</span>
+                </button>
+            </td>
+        </tr>
+        }
+    </tbody>
+</table>

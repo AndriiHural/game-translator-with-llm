@@ -1,0 +1,183 @@
+/* ✍️ СЕКЦІЯ РЕДАГУВАННЯ (Editable) */
+.editable {
+    background: #252529;
+    padding: 16px;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    /* Трохи збільшив відступ між рядками */
+}
+
+.edit-line {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #2d2d33;
+    padding: 8px;
+    border-radius: 4px;
+    transition: background 0.2s;
+
+    &.has-variants {
+        align-items: flex-start;
+        /* Щоб великий блок повідомлення вирівнювався по верхньому краю */
+    }
+}
+
+.edit-line .label {
+    font-size: 12px;
+    color: #aaa;
+    min-width: 50px;
+}
+
+/* Спільні стилі для інпутів та текстуреа */
+.edit-line input,
+.edit-line textarea {
+    flex: 1;
+    background: #1e1e22;
+    border: 1px solid #444;
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 14px;
+
+    &:focus {
+        border-color: #3f51b5;
+        outline: none;
+    }
+}
+
+/* Кастомізація інпутів */
+.edit-line input.input-name {
+    border-left: 4px solid #ffcc00;
+}
+
+/* Контейнер для меседжа, щоб розгорнути його на всю ширину разом з варіантами */
+.message-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+}
+
+.main-input-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+.edit-line textarea.input-message-main {
+    border-left: 4px solid #fff;
+}
+
+.edit-line textarea.input-message {
+    resize: vertical;
+    /* Дозволяємо ресайз по вертикалі за потреби */
+    min-height: 38px;
+    line-height: 1.4;
+}
+
+/* --- СЕКЦІЯ ВАРІАНТІВ ПЕРЕКЛАДУ --- */
+.variants-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    /* Ділимо простір на ліву і праву модель */
+    gap: 10px;
+    margin-left: 60px;
+    /* Вирівнювання по початку інпута (пропускаючи мітку "Msg:") */
+}
+
+.variant-box {
+    display: flex;
+    position: relative;
+    background: #1a1a1d;
+    border: 1px solid #3a3a40;
+    border-radius: 4px;
+    padding: 0 36px 0 0;
+    /* Відступ справа під кнопку-стрілку */
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+        border-color: #3f51b5;
+        background: #202026;
+
+        .apply-btn {
+            background: #3f51b5;
+            color: #fff;
+        }
+    }
+
+    .input-message {
+        flex: 1;
+        background: #1e1e22;
+        border: 1px solid #444;
+        color: #fff;
+        padding: 6px 10px;
+        border-radius: 4px;
+        font-family: inherit;
+        font-size: 14px;
+    }
+
+    /* Кольорові мітки брендів для кращого UX */
+    &.variant-left {
+        border-left: 3px solid #9c27b0;
+
+        /* Фіолетовий акцент для Gemma */
+        .variant-tag {
+            color: #e040fb;
+        }
+    }
+
+    &.variant-right {
+        border-left: 3px solid #00bcd4;
+
+        /* Блакитний акцент для Uncensored */
+        .variant-tag {
+            color: #00e5ff;
+        }
+    }
+
+    .variant-tag {
+        font-size: 10px;
+        text-transform: uppercase;
+        font-weight: 700;
+        display: block;
+        margin-bottom: 2px;
+        letter-spacing: 0.5px;
+    }
+
+    .variant-text {
+        margin: 0;
+        font-size: 12px;
+        color: #ccc;
+        white-space: pre-wrap;
+        line-height: 1.3;
+    }
+}
+
+/* Кнопка перенесення варіанту */
+.apply-btn {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #2d2d33;
+    color: #888;
+    border: none;
+    border-radius: 4px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+
+    &:hover {
+        transform: translateY(-50%) scale(1.05);
+    }
+}

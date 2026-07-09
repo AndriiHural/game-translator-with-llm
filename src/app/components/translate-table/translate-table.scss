@@ -1,0 +1,142 @@
+:host {
+    display: block;
+    width: 100%;
+}
+
+/* Основна таблиця */
+.csv-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    text-align: left;
+    font-size: 0.9rem;
+    color: #e0e0e0;
+}
+
+/* Заголовки (thead) */
+.csv-table th {
+    background-color: #2d2d2d;
+    color: #a5b4fc;
+    /* Ніжно-бузковий колір для тексту заголовків */
+    font-weight: 600;
+    padding: 0.75rem 1rem;
+    border-bottom: 2px solid #444;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+    position: sticky;
+    top: 0;
+    /* Щоб заголовки залишалися зверху при скролі */
+    z-index: 10;
+}
+
+.actions-header {
+    text-align: center;
+    width: 90px;
+}
+
+/* Комірки (tbody td) */
+.csv-table td {
+    padding: 0;
+    /* Прибираємо паддінг, щоб інпут займав 100% простору */
+    border-bottom: 1px solid #2a2a2a;
+    background-color: #1e1e1e;
+    transition: background-color 0.2s;
+}
+
+/* Ефект наведення на рядок */
+.csv-table tbody tr:hover td {
+    background-color: #252529;
+}
+
+/* Стилізація інпутів всередині таблиці */
+.table-cell-input {
+    width: 100%;
+    box-sizing: border-box;
+    background: transparent;
+    border: 1px solid transparent;
+    color: #e0e0e0;
+    padding: 0.75rem 1rem;
+    font-family: inherit;
+    font-size: 0.9rem;
+    outline: none;
+    transition: all 0.15s ease;
+}
+
+/* Фокус на комірці при редагуванні */
+.table-cell-input:focus {
+    background-color: #13121f;
+    border-color: #6366f1;
+    color: #fff;
+    box-shadow: inset 0 0 4px rgba(99, 102, 241, 0.3);
+}
+
+/* СТИЛЬ ДЛЯ ЗМІНЕНИХ КОМІРОК (.edited) */
+.csv-table td.edited {
+    background-color: rgba(16, 185, 129, 0.1);
+    /* Легкий зелений фон */
+    position: relative;
+}
+
+.csv-table td.edited .table-cell-input {
+    color: #34d399;
+    /* Зелений текст для змінених даних */
+    font-weight: 500;
+}
+
+/* Маленький зелений куточок-індикатор у зміненій комірці */
+.csv-table td.edited::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    border-width: 0 6px 6px 0;
+    border-style: solid;
+    border-color: transparent #10b981 transparent transparent;
+}
+
+/* Комірка з кнопкою дій */
+.action-cell {
+    text-align: center;
+    padding: 0.25rem !important;
+    /* Трохи паддінгу суто для кнопки */
+    vertical-align: middle;
+}
+
+/* Кнопка Retry */
+.btn-retry {
+    background-color: #374151;
+    color: #d1d5db;
+    border: 1px solid #4b5563;
+    padding: 0.4rem 0.6rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    transition: all 0.2s;
+}
+
+.btn-retry:hover {
+    background-color: #4f46e5;
+    /* Змінюється на фіолетовий при наведенні */
+    border-color: #6366f1;
+    color: white;
+    transform: translateY(-1px);
+}
+
+.btn-retry:active {
+    transform: translateY(0);
+}
+
+/* Ховаємо текст кнопки на маленьких екранах, залишаючи лише іконку */
+@media (max-width: 768px) {
+    .btn-retry .btn-text {
+        display: none;
+    }
+
+    .btn-retry {
+        padding: 0.4rem;
+    }
+}

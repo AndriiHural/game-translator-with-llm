@@ -1,0 +1,134 @@
+<div class="upload-container">
+    <div class="header-zone">
+        <h2>RPG Maker Advanced Translator</h2>
+        <div class="header-actions">
+            <div class="keys-selector-wrapper"
+                style="display: flex; gap: 10px; align-items: center; margin-right: 15px; background: rgba(255,255,255,0.05); padding: 5px 10px; border-radius: 4px;">
+                <span style="font-size: 0.9em; font-weight: bold; color: #ccc;">Поля для парсингу:</span>
+                <div class="keys-checkboxes" style="display: flex; gap: 12px;">
+                    @for (key of availableKeys(); track key) {
+                    <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 0.9em;">
+                        <input type="checkbox" [checked]="selectedKeys().has(key)" (change)="toggleKey(key)" />
+                        {{ key }}
+                    </label>
+                    }
+                </div>
+            </div>
+
+            <button *ngIf="filesList().length > 0 && !isAutoTranslating" class="btn btn-ai"
+                [disabled]="selectedKeys().size === 0" (click)="translateAndDownloadAllFiles()">
+                🚀 Перекласти та скачати ВСІ файли ({{ filesList().length }})
+            </button>
+
+            <button *ngIf="isAutoTranslating" class="btn btn-danger" (click)="stopAutoTranslation()">
+                🛑 Зупинити конвеєр
+            </button>
+
+            <button class="btn btn-secondary" [disabled]="csvContent().length === 0" (click)="copyToClipboard()">
+                <span class="icon">📋</span> Копіювати
+            </button>
+        </div>
+    </div>
+
+    <div class="file-input-wrapper" [style.pointer-events]="selectedKeys().size === 0 ? 'none' : 'auto'"
+        [style.opacity]="selectedKeys().size === 0 ? '0.5' : '1'" (click)="fileInput.click()">
+        <input #fileInput type="file" multiple (change)="onFileChange($event)" style="display: none;" />
+        <div class="upload-content">
+            <span class="upload-icon">📁</span>
+            <span class="label-text">
+                @if (selectedKeys().size === 0) {
+                ⚠️ Оберіть хоча б одне поле вгорі для парсингу...
+                } @else {
+                {{ currentFile() ? 'Додати ще файли...' : 'Select Files (JSON for RPG Maker)...' }}
+                }
+            </span>
+        </div>
+    </div>
+
+    <div *ngIf="filesList().length > 0" class="file-selector-zone">
+        <div class="input-group">
+            <label for="fileSelect">Активний файл для перекладу:</label>
+            <select id="fileSelect" class="cell-input select-control" [ngModel]="selectedFileIndex()"
+                (ngModelChange)="selectFile(+$event)">
+                <option *ngFor="let file of filesList(); let i = index" [value]="i">
+                    {{ file.name }}
+                </option>
+            </select>
+            <button class="btn btn-outline" [disabled]="!filesList()" (click)="removeFile()">Видалити</button>
+        </div>
+    </div>
+
+    <div *ngIf="error" class="error-message">
+        <span class="icon">⚠️</span> {{ error }}
+    </div>
+
+    <div *ngIf="csvContent() && csvContent().length > 0" class="editor-container">
+        <div class="toolbar settings-bar">
+            <div class="input-group">
+                <label for="sourceColumn">Source Column</label>
+                <input #sourceColumnInput type="number" [(ngModel)]="sourceColumn" class="cell-input"
+                    id="sourceColumn" />
+            </div>
+
+            <div class="input-group">
+                <label for="targetColumn">Target Column</label>
+                <input #targetColumnInput type="number" [(ngModel)]="targetColumn" class="cell-input"
+                    id="targetColumn" />
+            </div>
+
+            <div class="input-group">
+                <label for="chunkSize">Chunk Size</label>
+                <input #chunkSizeInput type="number" [ngModel]="chunkSize()" (ngModelChange)="chunkSize.set(+$event)"
+                    class="cell-input" id="chunkSize" />
+            </div>
+
+            <button class="btn btn-danger btn-sm" (click)="onResetClick()">Reset Cols</button>
+        </div>
+
+        <div class="toolbar action-bar">
+            <div class="group">
+                <button class="btn btn-primary" (click)="exportFile()">Download "{{ currentFile()?.name }}"</button>
+                <button class="btn btn-secondary" (click)="clearData()">Clear All Files</button>
+            </div>
+
+            <div class="group pagination-group">
+                <button class="btn btn-outline" (click)="nextChunk()">Next Chunk</button>
+                <span class="chunk-counter">{{currentChunkNumber + '/' + chunks().length}}</span>
+            </div>
+        </div>
+
+        <div class="table-wrapper">
+            <app-translate-table [data]="csvContent()" [original]="currentFile()?.originalParsedData || []"
+                [headerCells]="headerCells()" (dataChange)="updateFullTable($event)" (retryRow)="retryTranslate($event)"
+                [sourceColIndex]="sourceColumn" [targetColIndex]="targetColumn">
+            </app-translate-table>
+        </div>
+
+        <div class="ai-translation-zone">
+            <div class="toolbar ai-actions">
+                <button *ngIf="!isAutoTranslating" class="btn btn-ai" (click)="startAutoTranslation()">
+                    ✨ Start Auto Translate
+                </button>
+
+                <button *ngIf="isAutoTranslating" class="btn btn-danger" (click)="stopAutoTranslation()">
+                    🛑 Stop Auto Translate
+                </button>
+
+                <button class="btn btn-success" [disabled]="isAutoTranslating" (click)="applyResponse()">Apply</button>
+                <button class="btn btn-outline" [disabled]="isAutoTranslating" (click)="nextChunk()">Next Chunk</button>
+            </div>
+
+            <div class="textarea-wrapper">
+                <label class="textarea-label">Ollama Raw Response ({{ currentFile()?.name }}):</label>
+                <textarea [value]="olamaResponse()?.rowResponse || ''" (input)="updateResponse($event)" rows="8"
+                    placeholder="AI response will appear here...">
+                </textarea>
+            </div>
+        </div>
+    </div>
+
+    <div *ngIf="filesList().length === 0 && !error" class="empty-state">
+        <div class="empty-icon">📂</div>
+        <p>Налаштуйте поля вгорі та завантажте RPG Maker JSON файли для перекладу</p>
+    </div>
+</div>

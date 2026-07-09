@@ -1,0 +1,50 @@
+.main-toolbar {
+    background-color: #242424 !important; // В колір твоїх контейнерів
+    border-bottom: 1px solid #333;
+    display: flex;
+    justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    padding: 0 2rem;
+}
+
+.app-title {
+    color: #fff;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    .logo-icon {
+        color: #6366f1; // Фіолетовий акцент
+    }
+}
+
+.nav-links {
+    display: flex;
+    gap: 1rem;
+
+    a {
+        color: #9ca3af;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        transition: color 0.2s ease;
+
+        &:hover {
+            color: #fff;
+        }
+    }
+
+    // Стиль для активної сторінки
+    .active-link {
+        color: #3b82f6 !important; // Синій колір для активного стану
+        background-color: rgba(59, 130, 246, 0.1);
+        border-radius: 6px;
+    }
+}
+
+.content-container {
+    // На твоїх сторінках вже є padding: 2rem, тому тут просто забезпечуємо відступи
+    background-color: #1a1a1a;
+    min-height: calc(100vh - 64px); // Віднімаємо висоту тулбару
+}
