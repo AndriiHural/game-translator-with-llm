@@ -136,6 +136,22 @@
         <div class="actions-list">
             <div class="action-item">
                 <div class="action-info">
+                    <span class="action-title">Згенерувати глосарій</span>
+                    <p class="action-description">Знайти у діалозі всього файлу нові імена, посади, істот і
+                        предмети та злити з наявним глосарієм у файл.</p>
+                </div>
+                <button class="action-btn code-btn" [disabled]="isGlossaryGenerating()"
+                    (click)="generateGlossary()">
+                    @if (isGlossaryGenerating()) {
+                    Генерую… {{ glossaryProgress().done }}/{{ glossaryProgress().total }} стор.
+                    } @else {
+                    Згенерувати
+                    }
+                </button>
+            </div>
+
+            <div class="action-item">
+                <div class="action-info">
                     <span class="action-title">Використовуючи глосарій</span>
                     <p class="action-description">Замінює слова за допомогою глосарія</p>
                 </div>

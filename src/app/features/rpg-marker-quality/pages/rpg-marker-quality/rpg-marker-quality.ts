@@ -20,6 +20,8 @@ import { async } from 'rxjs';
 import { RpgMarkerQualityStatusBar } from "../../components/rpg-marker-quality-status-bar/rpg-marker-quality-status-bar";
 import { Page } from '../../classes/page';
 import { FlowStep, FlowStepStatus } from '../../classes/flow-step';
+import { GlossaryEntry } from '../../classes/glossary-entry';
+import { GlossaryGeneratorService } from '../../services/glossary-generator.service';
 
 @Component({
   selector: 'app-rpg-marker-quality',
@@ -35,11 +37,14 @@ export class RpgMarkerQuality {
   private fileExportService = inject(FILE_EXPORT_TOKEN);
   private fileEditorService = inject(FileEditorService);
   private ollamaService = inject(OllamaService);
+  private glossaryGenerator = inject(GlossaryGeneratorService);
   private cdr = inject(ChangeDetectorRef);
 
   protected glossaryFileInput = viewChild.required<ElementRef<HTMLInputElement>>('glossaryFileInput');
 
   isFlow1Procesing = signal<boolean>(false);
+  isGlossaryGenerating = signal<boolean>(false);
+  glossaryProgress = signal<{ done: number; total: number }>({ done: 0, total: 0 });
 
   // Проміжний результат аналізу сцени, який споживає крок емоцій
   private sceneAnalysis = '';
@@ -321,6 +326,28 @@ export class RpgMarkerQuality {
     console.log('[Glossary] result', result);
 
     PageHelper.saveAsResult(result, lines);
+  }
+
+  /**
+   * Генерує/оновлює глосарій з діалогу всього файлу і завантажує результат як JSON.
+   */
+  async generateGlossary(): Promise<void> {
+    this.isGlossaryGenerating.set(true);
+    this.glossaryProgress.set({ done: 0, total: 0 });
+    try {
+      const existing = this.glossaryFileContent();
+      const merged = await this.glossaryGenerator.generate(
+        this.uploadedList(),
+        Array.isArray(existing) ? existing as GlossaryEntry[] : [],
+        (done, total) => this.glossaryProgress.set({ done, total })
+      );
+      const json = JSON.stringify(merged, null, 2);
+      (this.fileExportService as unknown as RpgMakerFileExportService).downloadBlob(json, 'glossary.merged.json');
+    } catch (error) {
+      console.error('generateGlossary: помилка генерації глосарію', error);
+    } finally {
+      this.isGlossaryGenerating.set(false);
+    }
   }
 
 
