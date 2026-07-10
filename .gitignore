@@ -43,4 +43,8 @@ __screenshots__/
 .DS_Store
 Thumbs.db
 
-src/app/constants/prompt.ts
+**/prompt.ts
+
+# Claude Code
+.claude/
+CLAUDE.md

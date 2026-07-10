@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, computed, effect, ElementRef, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, computed, effect, ElementRef, inject, signal, untracked, viewChild } from '@angular/core';
 import { FileEditorService } from '../../../../services/file-editor.service';
 import { Line, LineType } from '../../classes/line';
 import { TranslateResult, TranslatorService } from '../../../../services/translate.service';
@@ -11,7 +11,7 @@ import { NgClass } from '@angular/common';
 import { PageHelper } from '../../helpers/page.helper';
 import { OllamaService } from '../../../../services/olama.service';
 import { Gemma, UncensoredModel } from '../../../../constants/models';
-import { analyzeSceneContextPrompt, applySceneEmotionsPrompt, chooseSystemVariant, chooseVariant, classifyLineTypesPrompt, dialogueGlossaryOnlyPrompt, editSystemMessagePrompt, fitTextToLimitsPrompt, naturalDialoguePrompt, selectAndValidateDialogueRowPrompt } from '../../constants/promps';
+import { analyzeSceneContextPrompt, applySceneEmotionsPrompt, chooseSystemVariant, chooseVariant, classifyLineTypesPrompt, dialogueGlossaryOnlyPrompt, editSystemMessagePrompt, fitTextToLimitsPrompt, naturalDialoguePrompt, selectAndValidateDialogueRowPrompt } from '../../constants/prompt';
 import { RpgMarkerQualityEditor } from '../../components/rpg-marker-quality-editor/rpg-marker-quality-editor';
 import { EventCommandCode } from '../../enums/event-comand-code.enum';
 import { form, FormField } from '@angular/forms/signals';
@@ -19,6 +19,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { async } from 'rxjs';
 import { RpgMarkerQualityStatusBar } from "../../components/rpg-marker-quality-status-bar/rpg-marker-quality-status-bar";
 import { Page } from '../../classes/page';
+import { FlowStep, FlowStepStatus } from '../../classes/flow-step';
 
 @Component({
   selector: 'app-rpg-marker-quality',
@@ -39,14 +40,24 @@ export class RpgMarkerQuality {
   protected glossaryFileInput = viewChild.required<ElementRef<HTMLInputElement>>('glossaryFileInput');
 
   isFlow1Procesing = signal<boolean>(false);
-  isLineTypesValidationProcessing = signal<boolean>(false);
-  isDialogueTranslationProcessing = signal<boolean>(false);
-  isGlossaryOnlyProcessing = signal<boolean>(false);
-  isSystemMessagesProcessing = signal<boolean>(false);
-  isChooseFromVariantsProcessing = signal<boolean>(false);
-  isChooseSystemVariantProcessing = signal<boolean>(false);
-  isAnalyzeSceneProcessing = signal<boolean>(false);
-  isSceneEmotionsProcessing = signal<boolean>(false);
+
+  // Проміжний результат аналізу сцени, який споживає крок емоцій
+  private sceneAnalysis = '';
+
+  // Єдине джерело правди для onFlow1 та статус-бару.
+  // Щоб додати крок — додай сюди один запис (порожній label покаже плейсхолдер у барі).
+  readonly flowSteps: FlowStep[] = [
+    { key: 'lineTypes', label: 'Валідація типів рядків', status: signal<FlowStepStatus>('pending'), run: () => this.checkLineTypes() },
+    { key: 'natural', label: 'Художній переклад діалогів', status: signal<FlowStepStatus>('pending'), run: () => this.translateToNaturalDialogue() },
+    { key: 'system', label: 'Обробка системних повідомлень', status: signal<FlowStepStatus>('pending'), run: () => this.editSystemMessage() },
+    { key: 'choose', label: 'Генерація та вибір варіантів ШІ', status: signal<FlowStepStatus>('pending'), run: () => this.chooseAllMessageVariants() },
+    { key: 'tags', label: 'Валідація тегів RPG Maker', status: signal<FlowStepStatus>('pending'), run: () => this.checkTagValidation() },
+    { key: 'glossary', label: 'Фіналізація за глосарієм', status: signal<FlowStepStatus>('pending'), run: () => this.translateWithGlossary() },
+    { key: 'analyze', label: 'Аналіз сцени', status: signal<FlowStepStatus>('pending'), run: async () => { this.sceneAnalysis = await this.analyzeScene(); } },
+    { key: 'emotions', label: 'Емоційне забарвлення', status: signal<FlowStepStatus>('pending'), run: () => this.applySceneEmotions(this.sceneAnalysis) },
+    { key: 'fit', label: 'Підгонка під ліміти', status: signal<FlowStepStatus>('pending'), run: () => this.fitTextToLimits() },
+    { key: 'finalTags', label: 'Фінальна нормалізація тегів', status: signal<FlowStepStatus>('pending'), run: () => this.checkTagValidation() },
+  ];
 
 
   originalLines = signal<Array<Line>>([]);
@@ -60,9 +71,18 @@ export class RpgMarkerQuality {
 
   uploadedList = signal<Array<SceneEvent>>([]);
   // TODO Add other text lines codes
-  eventList = computed(() => this.uploadedList()?.filter(event => this.onlyTextFilter() ? event.pages.some(page => page.list.some(line => line.code === EventCommandCode.TextLine)) : true) || [] as SceneEvent[]);
-  pageList = computed(() => this.eventList()[this.selectedEventId()]?.pages.filter(page => this.onlyTextFilter() ? page.list.some(line => line.code === EventCommandCode.TextLine) : true) || [] as Page[]);
-  lineList = computed(() => Object.values(this.codes()).some(Boolean) ? this.pageList()[this.selectedPageId()]?.list.filter(line => this.codes()[line.code as EventCommandCode.ShowText | EventCommandCode.TextLine]) : this.pageList()[this.selectedPageId()]?.list || [] as Line[]);
+  // Структурні фільтри (чи є в сторінці текстові рядки) читаємо через untracked,
+  // щоб додавання рядка не перераховувало eventList/pageList і не смикало ефект-скидання вибору.
+  eventList = computed(() => this.uploadedList()?.filter(event => this.onlyTextFilter() ? untracked(() => event.pages.some(page => page.list().some(line => line.code === EventCommandCode.TextLine))) : true) || [] as SceneEvent[]);
+  pageList = computed(() => this.eventList()[this.selectedEventId()]?.pages.filter(page => this.onlyTextFilter() ? untracked(() => page.list().some(line => line.code === EventCommandCode.TextLine)) : true) || [] as Page[]);
+  // lineList навмисно читає list() з відстеженням — саме він рендерить рядки й має оновлюватись при addLine.
+  // Завжди повертає масив (?? []), бо на ньому викликається .filter у кроках флоу і .length у шаблоні.
+  lineList = computed(() => {
+    const list = this.pageList()[this.selectedPageId()]?.list() ?? [];
+    return Object.values(this.codes()).some(Boolean)
+      ? list.filter(line => this.codes()[line.code as EventCommandCode.ShowText | EventCommandCode.TextLine])
+      : list;
+  });
 
 
 
@@ -175,6 +195,8 @@ export class RpgMarkerQuality {
   onEventSelected(event: MatSelectChange<number>) {
     console.log(event.value);
     this.selectedEventId.set(event.value);
+    // При зміні події перемикаємось на першу сторінку (фільтри застосуються автоматично через lineList)
+    this.selectedPageId.set(0);
   }
 
   onPageSelected(event: MatSelectChange<number>) {
@@ -183,56 +205,57 @@ export class RpgMarkerQuality {
   }
 
   async onFlow1() {
-    this.isLineTypesValidationProcessing.set(true);
-    this.isDialogueTranslationProcessing.set(true);
-    this.isGlossaryOnlyProcessing.set(true);
-    this.isSystemMessagesProcessing.set(true);
-    this.isChooseFromVariantsProcessing.set(true);
-    this.isChooseSystemVariantProcessing.set(true);
-    this.isAnalyzeSceneProcessing.set(true);
-    this.isSceneEmotionsProcessing.set(true);
-
     this.isFlow1Procesing.set(true);
-    await this.checkLineTypes();
-    this.isLineTypesValidationProcessing.set(false);
+    this.flowSteps.forEach(step => step.status.set('pending'));
 
-    await this.translateToNaturalDialogue();
-    this.isDialogueTranslationProcessing.set(false);
+    try {
+      for (const step of this.flowSteps) {
+        step.status.set('processing');
+        try {
+          await step.run();
+          step.status.set('completed');
+        } catch (error) {
+          step.status.set('error');
+          console.error(`[onFlow1] крок "${step.key}" впав:`, error);
+          break; // зупиняємо флоу на першій помилці
+        }
+      }
+    } finally {
+      this.isFlow1Procesing.set(false);
+    }
+  }
 
-    await this.editSystemMessage();
-    this.isSystemMessagesProcessing.set(false);
-
+  /**
+   * Генерація та вибір найкращого варіанту для кожної репліки (Message).
+   * Крок 'choose' у flowSteps.
+   */
+  async chooseAllMessageVariants(): Promise<void> {
     const lineIds = this.lineList().filter(line => [LineType.Message].includes(line.type())).map(line => line.id);
     for (let i = 0; i < lineIds.length; i++) {
-      const id = lineIds[i];
       console.log('Processing line:', i + 1, '/', lineIds.length);
-      await this.onChooseFromVariants(id, chooseVariant);
+      await this.onChooseFromVariants(lineIds[i], chooseVariant);
     }
-    this.isChooseFromVariantsProcessing.set(false);
-
-    await this.checkTagValidation();
-    this.isChooseSystemVariantProcessing.set(false);
-
-    await this.translateWithGlossary();
-    this.isGlossaryOnlyProcessing.set(false);
-
-    const analysis = await this.analyzeScene();
-    this.isAnalyzeSceneProcessing.set(false);
-
-    await this.applySceneEmotions(analysis);
-    this.isSceneEmotionsProcessing.set(false);
-
-    this.isFlow1Procesing.set(false);
   }
 
   async onChooseFromVariants(lineId: number, promptBuilder: (context: string) => string): Promise<void> {
     const promptBody = PageHelper.trassformToPromptBody(this.lineList(), lineId, true);
     const prompt = promptBuilder(promptBody);
 
-    const result = await this.ollamaService.translate(prompt, Gemma);
-    console.log('result after retry', result);
+    const maxRetries = 3;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      const result = await this.ollamaService.translate(prompt, Gemma);
+      console.log('result attempt', attempt, '/', maxRetries, result);
 
-    PageHelper.saveAsResult(result, this.lineList());
+      try {
+        PageHelper.saveAsResult(result, this.lineList());
+        return;
+      } catch (error) {
+        console.warn(`onChooseFromVariants: спроба ${attempt}/${maxRetries} невдала, повторюємо запит`, error);
+        if (attempt === maxRetries) {
+          throw error;
+        }
+      }
+    }
   }
 
   /**
@@ -243,7 +266,7 @@ export class RpgMarkerQuality {
    * Перетворює діалоги на більш природні
    */
   async translateToNaturalDialogue(): Promise<void> {
-    const lines = this.pageList().flatMap(page => page.list).filter(line => [LineType.Message].includes(line.type()));
+    const lines = this.lineList().filter(line => [LineType.Message].includes(line.type()));
     const promptBody = PageHelper.trassformToPromptBody(lines);
     const prompt = `${naturalDialoguePrompt}
     ${promptBody}`
@@ -263,7 +286,7 @@ export class RpgMarkerQuality {
    * Перевіряє діалоги на правильність тегів
    */
   async checkTagValidation() {
-    const lines = this.pageList().flatMap(page => page.list).filter(line => [LineType.Name, LineType.Message, LineType.Other].includes(line.type()));
+    const lines = this.lineList().filter(line => [LineType.Name, LineType.Message, LineType.Other].includes(line.type()));
     const promptBody = PageHelper.trassformToPromptBody(lines);
     const prompt = `${selectAndValidateDialogueRowPrompt}
     ${promptBody}`
@@ -280,7 +303,13 @@ export class RpgMarkerQuality {
    */
   async translateWithGlossary() {
     if (!this.glossaryFileContent()) {
-      this.glossaryFileInput().nativeElement.click()
+      // Чекаємо, поки користувач вибере файл глосарія (або скасує діалог)
+      await this.waitForGlossaryUpload();
+    }
+    if (!this.glossaryFileContent()) {
+      // Глосарій так і не завантажено — пропускаємо крок, щоб не слати "null" у модель
+      console.warn('translateWithGlossary: глосарій не завантажено, крок пропущено');
+      return;
     }
     console.log('lines before translateWithGlossary', this.lineList())
     const lines = this.lineList();
@@ -299,8 +328,8 @@ export class RpgMarkerQuality {
    * Редагує системні повідомлення
    */
   async editSystemMessage(): Promise<void> {
-    const lines = this.pageList().flatMap(page => page.list).filter(line => [LineType.Other, LineType.Message, LineType.Name].includes(line.type()));
-    const systemLines = this.pageList().flatMap(page => page.list).filter(line => [LineType.Other].includes(line.type()));
+    const lines = this.lineList().filter(line => [LineType.Other, LineType.Message, LineType.Name].includes(line.type()));
+    const systemLines = this.lineList().filter(line => [LineType.Other].includes(line.type()));
 
     for (let i = 0; i < systemLines.length; i++) {
       const systemLine = systemLines[i];
@@ -331,26 +360,36 @@ export class RpgMarkerQuality {
    * Перевіряє типи повідомлень
    */
   async checkLineTypes(): Promise<void> {
-    const lines = this.pageList().flatMap(page => page.list).filter(line => [LineType.Other, LineType.Message, LineType.Name].includes(line.type()));
+    const lines = this.lineList().filter(line => [LineType.Other, LineType.Message, LineType.Name].includes(line.type()));
     const promptBody = PageHelper.getLinesForTypeCheck(lines);
     const prompt = classifyLineTypesPrompt(promptBody)
 
-    const result = await this.ollamaService.translate(prompt, Gemma);
-    console.log('[Check Line Types] result1', result);
+    const maxRetries = 3;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      const result = await this.ollamaService.translate(prompt, Gemma);
+      console.log('[Check Line Types] attempt', attempt, '/', maxRetries, result);
 
-    PageHelper.changeLinesType(JSON.parse(result), lines);
+      const parsed = PageHelper.parseJsonArray<{ id: number, type: string, line: string, isChanged: boolean }>(result);
+      if (parsed) {
+        PageHelper.changeLinesType(parsed, lines);
+        return;
+      }
+
+      console.warn(`checkLineTypes: спроба ${attempt}/${maxRetries} — невалідний JSON, повторюємо запит`);
+    }
+
+    throw new Error('checkLineTypes: не вдалося отримати валідний JSON після повторів');
   }
 
   /**
    * Аналізує сцену
    */
   async analyzeScene(): Promise<string> {
-    const lines = this.pageList().flatMap(page => page.list).filter(line => [LineType.Other, LineType.Message, LineType.Name].includes(line.type()));
+    const lines = this.lineList().filter(line => [LineType.Other, LineType.Message, LineType.Name].includes(line.type()));
     const promptBody = PageHelper.trassformToPromptBody(lines);
     const prompt = analyzeSceneContextPrompt(promptBody)
 
     const result = await this.ollamaService.translate(prompt, Gemma);
-    console.log('[Analyze Scene] result', JSON.parse(result));
 
     // type 
     //   {
@@ -376,7 +415,7 @@ export class RpgMarkerQuality {
       const promptBody = messages[i];
       const prompt = applySceneEmotionsPrompt(sceneSummary, promptBody)
 
-      const result = await this.ollamaService.translate(prompt, Gemma, { temperature: 0.7, top_p: 0.2 });
+      const result = await this.ollamaService.translate(prompt, Gemma, { temperature: 0.7, top_p: 0.9 });
       console.log('[Apply Scene Emotions] result', result);
 
       PageHelper.saveAsResult(result, this.lineList());
@@ -397,7 +436,7 @@ export class RpgMarkerQuality {
       const promptBody = messages[i];
       const prompt = fitTextToLimitsPrompt(promptBody);
 
-      const result = await this.ollamaService.translate(prompt, Gemma, { temperature: 0.3, top_p: 0.2 });
+      const result = await this.ollamaService.translate(prompt, Gemma, { temperature: 0, top_p: 0.1 });
 
       console.log('[Fit Text To Limits] result', result);
 
@@ -459,6 +498,30 @@ export class RpgMarkerQuality {
     this.glossaryFileInput().nativeElement.click()
   }
 
+  private finishGlossaryWait: (() => void) | null = null;
+
+  /**
+   * Відкриває діалог вибору файлу глосарія і повертає Promise,
+   * який резолвиться після завантаження файлу (setGlossary) або скасування діалогу.
+   */
+  private waitForGlossaryUpload(): Promise<void> {
+    return new Promise<void>((resolve) => {
+      const input = this.glossaryFileInput().nativeElement;
+
+      const onCancel = () => this.finishGlossaryWait?.();
+
+      // Єдина точка завершення: знімає слухача і резолвить проміс (лише раз)
+      this.finishGlossaryWait = () => {
+        input.removeEventListener('cancel', onCancel);
+        this.finishGlossaryWait = null;
+        resolve();
+      };
+
+      input.addEventListener('cancel', onCancel, { once: true });
+      input.click();
+    });
+  }
+
   async setGlossary(event: Event): Promise<void> {
     const uploadedFile = this.uploadFileFromInput(event);
 
@@ -468,6 +531,9 @@ export class RpgMarkerQuality {
       this.glossaryFileContent.set(result.content);
     } catch (error) {
       console.error('Error:', error);
+    } finally {
+      // Розблоковуємо translateWithGlossary, якщо він чекає на вибір файлу
+      this.finishGlossaryWait?.();
     }
   }
 

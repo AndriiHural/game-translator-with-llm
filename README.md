@@ -30,62 +30,71 @@ The project is designed to automate game localization by supporting multiple gam
 
 The project is currently under active development, and new features are being added continuously.
 
+---
 
+## Tech stack
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.0.4.
+* [Angular](https://angular.dev) 22 (standalone components) + [Angular Material](https://material.angular.io)
+* [Ollama](https://ollama.com) as the local LLM backend (default: `http://localhost:11434`)
+* [Vitest](https://vitest.dev) for unit tests
 
-## Development server
+## Prerequisites
 
-To start a local development server, run:
+* [Node.js](https://nodejs.org) (LTS) and npm
+* A running [Ollama](https://ollama.com) instance with the required models pulled.
+  Model ids used by the app are defined in
+  [`src/app/constants/models.ts`](src/app/constants/models.ts).
 
-```bash
-ng serve
-```
-
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## Getting started
 
 ```bash
-ng generate --help
+npm install      # install dependencies
+npm start        # start the dev server at http://localhost:4200
 ```
 
-## Building
+The application reloads automatically whenever you modify a source file.
 
-To build the project run:
+## Available scripts
 
-```bash
-ng build
+| Command         | Description                                        |
+| --------------- | -------------------------------------------------- |
+| `npm start`     | Start the local dev server (`ng serve`).           |
+| `npm run build` | Build the project into `dist/`.                    |
+| `npm run watch` | Rebuild on change (development configuration).      |
+| `npm test`      | Run unit tests with Vitest.                        |
+
+## Supported formats
+
+Each localization format is exposed as a route and backed by its own parser,
+exporter, and prompt strategy:
+
+| Format               | Route(s)                                          |
+| -------------------- | ------------------------------------------------- |
+| CSV                  | `/upload`, `/merge`                               |
+| Naninovel            | `/naninovel`                                      |
+| Unity MonoBehaviour  | `/monoBehaviour`                                  |
+| RPG Maker            | `/rpgmaker`, `/rpgmaker/system`, `/rpgmaker/quality` |
+
+## Project structure
+
+```
+src/app/
+├── services/     # file parsers/exporters and the Ollama client
+├── strategies/   # per-format prompt strategies
+├── tokens/       # DI tokens wiring parser + exporter + strategy per route
+├── constants/    # prompt templates and model ids
+├── components/   # shared UI (e.g. translation table)
+├── features/     # self-contained feature modules (RPG Maker quality editor)
+└── rpg-marker/   # RPG Maker-specific parser/exporter/strategy
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+The app uses a strategy pattern: each route in
+[`src/app/app.routes.ts`](src/app/app.routes.ts) provides three DI tokens
+(`FILE_PARSER_TOKEN`, `FILE_EXPORT_TOKEN`, `PROMPT_STRATEGY_TOKEN`), so a single
+upload component can drive every supported format. Adding a new format means adding
+a parser, an exporter, a prompt strategy, and a route that provides all three.
 
-## Running unit tests
+## Additional resources
 
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+For more information on the Angular CLI, see the
+[Angular CLI Overview and Command Reference](https://angular.dev/tools/cli).

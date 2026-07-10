@@ -1,4 +1,5 @@
 import { Component, input } from '@angular/core';
+import { FlowStep } from '../../classes/flow-step';
 
 @Component({
   selector: 'app-rpg-marker-quality-status-bar',
@@ -7,11 +8,8 @@ import { Component, input } from '@angular/core';
   styleUrl: './rpg-marker-quality-status-bar.scss',
 })
 export class RpgMarkerQualityStatusBar {
+  /** Загальний прапор виконання флоу — для глобального спінера */
   isFlow1Procesing = input<boolean>(false);
-  isLineTypesValidationProcessing = input<boolean>(false);
-  isDialogueTranslationProcessing = input<boolean>(false);
-  isGlossaryOnlyProcessing = input<boolean>(false);
-  isSystemMessagesProcessing = input<boolean>(false);
-  isChooseFromVariantsProcessing = input<boolean>(false);
-  isChooseSystemVariantProcessing = input<boolean>(false);
+  /** Список кроків флоу — рендериться як є, статус кожного кроку живий (signal) */
+  steps = input<FlowStep[]>([]);
 }

@@ -1,4 +1,4 @@
-import { signal } from "@angular/core";
+import { signal, WritableSignal } from "@angular/core";
 import { Line, LineType } from "./line";
 
 export enum EventStatus {
@@ -10,7 +10,7 @@ export enum EventStatus {
 }
 
 export class Page {
-    list: Array<Line>;
+    list: WritableSignal<Array<Line>>;
 
 
     // aditionasl
@@ -21,7 +21,7 @@ export class Page {
         const { list, ...data } = page;
 
         this.id = id;
-        this.list = this.mapLines(list)
+        this.list = signal(this.mapLines(list));
 
         console.log('page', page);
         this.original = page;
@@ -33,26 +33,40 @@ export class Page {
 
         const result = {
             ...dynamicData,
-            list: this.list,
+            list: this.list(),
         };
         console.log('result', result);
         return result;
     }
 
-    addLine(message: string, addAfter: number) {
+    addLine(message: string, addAfter: number): number {
         console.log('addAfter', message, addAfter);
-        const firstLine = this.list.find(l => l.id === addAfter)!;
-        console.log('firstLine', firstLine);
-        const id = this.list.length; // Або інша логіка генерації ID
+
+        const list = this.list();
+
+        // addAfter — це id рядка-якоря, а не його позиція в масиві.
+        // Шукаємо реальний індекс, бо після попередніх вставок id та індекси розходяться.
+        const anchorIndex = list.findIndex(l => l.id === addAfter);
+        const anchor = anchorIndex !== -1 ? list[anchorIndex] : list[list.length - 1];
+        const insertAt = anchorIndex !== -1 ? anchorIndex + 1 : list.length;
+        console.log('anchor', anchor);
+
+        // Унікальний id (max + 1), щоб не залежати від позиції в масиві
+        const id = list.reduce((max, l) => Math.max(max, l.id), -1) + 1;
 
         const newLine = new Line(
-            { code: firstLine.code, parameters: [message], indent: firstLine.indent },
+            { code: anchor.code, parameters: [message], indent: anchor.indent },
             id,
-            firstLine.type(),
+            anchor.type(),
             this.id
         );
 
-        this.list.splice(addAfter + 1, 0, newLine);
+        // Незмінне оновлення масиву, щоб спрацював сигнал і оновився UI
+        const next = [...list];
+        next.splice(insertAt, 0, newLine);
+        this.list.set(next);
+
+        return id;
     }
 
     private mapLines(list: Array<any>): Array<Line> {

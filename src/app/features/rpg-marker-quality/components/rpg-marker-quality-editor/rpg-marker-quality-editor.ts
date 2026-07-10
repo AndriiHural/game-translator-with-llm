@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Line, LineStatus, LineType } from '../../classes/line';
 import { Gemma, UncensoredModel } from '../../../../constants/models';
 import { PageHelper } from '../../helpers/page.helper';
-import { naturalDialogueWithTargetPrompt, chooseVariant } from '../../constants/promps';
+import { naturalDialogueWithTargetPrompt, chooseVariant } from '../../constants/prompt';
 import { OllamaService } from '../../../../services/olama.service';
 
 @Component({

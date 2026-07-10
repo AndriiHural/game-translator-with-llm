@@ -59,7 +59,7 @@ export class SceneEvent {
     }
 
     getLinesForPage(pageNumber: number): Array<Line> {
-        return this.pages[pageNumber].list.filter(line => line.type() === LineType.Message || line.type() === LineType.Name);
+        return this.pages[pageNumber].list().filter(line => line.type() === LineType.Message || line.type() === LineType.Name);
     }
 
     private mapLines(pages: Array<{ list: Array<any> }>,): Array<Page> {

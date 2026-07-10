@@ -124,13 +124,7 @@
         </div>
     </div>
 
-    <app-rpg-marker-quality-status-bar [isFlow1Procesing]="isFlow1Procesing()"
-        [isLineTypesValidationProcessing]="isLineTypesValidationProcessing()"
-        [isDialogueTranslationProcessing]="isDialogueTranslationProcessing()"
-        [isGlossaryOnlyProcessing]="isGlossaryOnlyProcessing()"
-        [isSystemMessagesProcessing]="isSystemMessagesProcessing()"
-        [isChooseFromVariantsProcessing]="isChooseFromVariantsProcessing()"
-        [isChooseSystemVariantProcessing]="isChooseSystemVariantProcessing()">
+    <app-rpg-marker-quality-status-bar [steps]="flowSteps" [isFlow1Procesing]="isFlow1Procesing()">
     </app-rpg-marker-quality-status-bar>
 
     <div class="actions-panel">

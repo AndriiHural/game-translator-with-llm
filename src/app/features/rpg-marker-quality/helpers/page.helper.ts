@@ -9,7 +9,6 @@ export abstract class PageHelper {
         const flushMessages = () => {
             if (currentMessages.length > 0) {
                 const ids = currentMessages.map(m => m.id).join(',');
-                console.log('ids', ids);
                 const combinedText = currentMessages.map(m => m.parameters()[0]).join('[br]');
                 const valiant2 = currentMessages.map(m => m.variants()[Gemma] || '').join('[br]');
                 const valiant3 = currentMessages.map(m => m.variants()[UncensoredModel] || '').join('[br]');
@@ -59,7 +58,8 @@ export abstract class PageHelper {
 
             const splittedRow = row.split('|');
             const idsString = splittedRow[0];
-            let lineText = splittedRow[1] || '';
+            // slice(1).join('|') — щоб не втратити текст, якщо репліка містить "|"
+            let lineText = splittedRow.slice(1).join('|') || '';
 
             // Видаляємо префікси "Name: " або "Message: ", щоб залишився чисто текст від моделі
             lineText = lineText.replace(/^(Name:|Message:)\s*/, '');
@@ -99,7 +99,8 @@ export abstract class PageHelper {
 
             const splittedRow = row.split('|');
             const idsString = splittedRow[0];
-            let lineText = splittedRow[1] || '';
+            // slice(1).join('|') — щоб не втратити текст, якщо репліка містить "|"
+            let lineText = splittedRow.slice(1).join('|') || '';
 
             // Видаляємо префікси "Name: " або "Message: ", щоб залишився чисто текст від моделі
             lineText = lineText.replace(/^(Name:|Message:|Variant:)\s*/, '');
@@ -107,32 +108,34 @@ export abstract class PageHelper {
             // Розбиваємо ID (на випадок, якщо там кілька ID через кому)
             const lineIds = idsString.split(',').map(id => +id);
 
-            if (lineIds.length > 1) {
-                // Якщо це об'єднане повідомлення, розбиваємо його назад по [br]
-                const textVariants = lineText.split('[br]');
+            // Ігноруємо рядки, де ліва частина — не id (заголовки/пояснення моделі)
+            if (lineIds.some(id => Number.isNaN(id))) return;
 
-                lineIds.forEach((id, index) => {
-                    const line = lines.find(l => l.id === id);
-                    if (line) {
-                        // Якщо модель чомусь повернула менше реплік, ніж було, 
-                        // беремо порожній рядок як фолбек
-                        line.parameters.set([textVariants[index] !== undefined ? textVariants[0] : '']);
-                        textVariants.shift();
-                    }
-                });
-                console.log("textVariants after update exist lines", textVariants);
-                if (lineIds.length > 0) {
-                    if (!page) {
-                        throw new Error("Error while mapping lines. Page is null or undefined");
-                    }
-                    textVariants.forEach(text => page.addLine(text, lineIds[lineIds.length - 1]));
-                }
-            } else {
-                // Якщо це поодинокий рядок (наприклад, Name або одиночний Message)
-                const line = lines.find(l => l.id === lineIds[0]);
+            // [br] — це роздільник між окремими рядками репліки, а не частина тексту.
+            // Завжди розбиваємо по [br] і розкидаємо блоки по рядках — навіть для одиночного id,
+            // бо fitTextToLimits може додати [br] і одну репліку треба розбити на кілька рядків.
+            const textVariants = lineText.split('[br]');
+
+            lineIds.forEach((id) => {
+                // Споживаємо блоки послідовно, щоб зберегти вирівнювання навіть якщо рядок не знайдено
+                const text = textVariants.shift();
+                const line = lines.find(l => l.id === id);
                 if (line) {
-                    line.parameters.set([lineText]);
+                    // Якщо модель повернула менше блоків, ніж було рядків — фолбек порожній рядок
+                    line.parameters.set([text !== undefined ? text : '']);
                 }
+            });
+
+            // Зайві блоки (модель розбила репліку на більше рядків) → додаємо нові рядки
+            if (textVariants.length > 0) {
+                if (!page) {
+                    throw new Error("Error while mapping lines. Page is null or undefined");
+                }
+                // Переставляємо якір на щойно доданий рядок, щоб зберегти порядок реплік
+                let anchorId = lineIds[lineIds.length - 1];
+                textVariants.forEach(text => {
+                    anchorId = page.addLine(text, anchorId);
+                });
             }
         });
 
@@ -150,6 +153,33 @@ export abstract class PageHelper {
         });
 
         return lines;
+    }
+
+    /**
+     * Толерантно парсить JSON-масив із відповіді моделі:
+     * пробує сирий текст, а якщо не вийшло — витягує підрядок від першого "[" до останнього "]"
+     * (на випадок ```-огортки чи зайвого тексту довкола). Повертає null, якщо валідного масиву немає.
+     */
+    static parseJsonArray<T = any>(raw: string): T[] | null {
+        const candidates = [raw];
+        const start = raw.indexOf('[');
+        const end = raw.lastIndexOf(']');
+        if (start !== -1 && end > start) {
+            candidates.push(raw.slice(start, end + 1));
+        }
+
+        for (const candidate of candidates) {
+            try {
+                const parsed = JSON.parse(candidate);
+                if (Array.isArray(parsed)) {
+                    return parsed;
+                }
+            } catch {
+                // пробуємо наступний варіант
+            }
+        }
+
+        return null;
     }
 
     static getLinesForTypeCheck(lines: Array<Line>) {
