@@ -72,6 +72,13 @@
     border-left: 4px solid #fff;
 }
 
+.input-message-wrapper {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
 .edit-line textarea.input-message {
     resize: vertical;
     /* Дозволяємо ресайз по вертикалі за потреби */

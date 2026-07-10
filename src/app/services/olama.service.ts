@@ -49,7 +49,7 @@ export class OllamaService {
         );
     }
 
-    async translate(prompt: string, model: string | undefined = this.model): Promise<string> {
+    async translate(prompt: string, model: string | undefined = this.model, options = { temperature: 0, top_p: 0.1 }): Promise<string> {
         // console.log(prompt);
 
         const response = await firstValueFrom(
@@ -72,8 +72,7 @@ export class OllamaService {
                     prompt,
                     stream: false,
                     options: {
-                        temperature: 0,
-                        top_p: 0.1,
+                        ...options,
 
                         //Recomended
                         // temperature: 1.0,

@@ -1,4 +1,4 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { FileEditorService } from '../../../../services/file-editor.service';
 import { Line, LineType } from '../../classes/line';
 import { TranslateResult, TranslatorService } from '../../../../services/translate.service';
@@ -9,25 +9,28 @@ import { FILE_EXPORT_TOKEN } from '../../../../tokens/file-processor.tokens';
 import { RpgMakerFileExportService } from '../../../../rpg-marker/services/rpg-maker-file-export.service';
 import { NgClass } from '@angular/common';
 import { PageHelper } from '../../helpers/page.helper';
-import { firstValueFrom } from 'rxjs';
 import { OllamaService } from '../../../../services/olama.service';
 import { Gemma, UncensoredModel } from '../../../../constants/models';
-import { naturalDialoguePrompt } from '../../constants/promps';
+import { chooseVariant, naturalDialoguePrompt, selectAndValidateDialogueRowPrompt } from '../../constants/promps';
 import { RpgMarkerQualityEditor } from '../../components/rpg-marker-quality-editor/rpg-marker-quality-editor';
+import { EventCommandCode } from '../../enums/event-comand-code.enum';
+import { form, FormField } from '@angular/forms/signals';
+import { MatDividerModule } from '@angular/material/divider';
 
 @Component({
   selector: 'app-rpg-marker-quality',
-  imports: [MatSelectModule, FormsModule, NgClass, RpgMarkerQualityEditor],
+  imports: [MatSelectModule, FormsModule, NgClass, RpgMarkerQualityEditor, FormField, MatDividerModule],
   providers: [TranslatorService],
   templateUrl: './rpg-marker-quality.html',
   styleUrl: './rpg-marker-quality.scss',
 })
 export class RpgMarkerQuality {
   protected readonly LineType = LineType;
+  protected readonly EventCommandCode = EventCommandCode;
 
   private fileExportService = inject(FILE_EXPORT_TOKEN);
-  private fileEditor = inject(FileEditorService);
-  private olamaService = inject(OllamaService);
+  private fileEditorService = inject(FileEditorService);
+  private ollamaService = inject(OllamaService);
 
   originalLines = signal<Array<Line>>([]);
   editedLines = signal<Array<Line>>([]);
@@ -38,15 +41,24 @@ export class RpgMarkerQuality {
   mapList = signal<Array<any>>([]);
   selectedMapId = signal<string>('');
 
-  eventList = signal<Array<SceneEvent>>([]);
+  uploadedList = signal<Array<SceneEvent>>([]);
+  // TODO Add other text lines codes
+  eventList = computed(() => this.uploadedList()?.filter(event => this.onlyTextFilter() ? event.pages.some(page => page.list.some(line => line.code === EventCommandCode.TextLine)) : true) || []);
+  pageList = computed(() => this.eventList()[this.selectedEventId()]?.pages.filter(page => this.onlyTextFilter() ? page.list.some(line => line.code === EventCommandCode.TextLine) : true) || []);
+  lineList = computed(() => Object.values(this.codes()).some(Boolean) ? this.pageList()[this.selectedPageId()]?.list.filter(line => this.codes()[line.code as EventCommandCode.ShowText | EventCommandCode.TextLine]) : this.pageList()[this.selectedPageId()]?.list || []);
+
   selectedEventId = signal<number>(0);
   selectedPageId = signal<number>(0);
+  onlyTextFilter = signal<boolean>(true);
+  codes = signal({ [EventCommandCode.ShowText]: true, [EventCommandCode.TextLine]: true });
 
   selectedEvent = signal<SceneEvent | null>(null);
 
   files = signal<File[] | null>(null);
 
   activeFileContent: object | null = null;
+
+  codesForm = form(this.codes)
 
   constructor() {
     // effect(() => {
@@ -55,6 +67,34 @@ export class RpgMarkerQuality {
     //   this.currentMapName.set(currentMap.name || 'Untitled');
     //   this.extractAndSetLines();
     // });
+
+    effect(() => {
+      this.eventList();
+      console.log('eventList', this.eventList());
+      this.selectedEventId.set(0);
+      this.selectedPageId.set(0);
+    });
+
+    effect(() => {
+      console.log('pageList', this.pageList());
+      console.log('this.selectedPageId()', this.selectedPageId());
+
+    })
+  }
+
+  async onOpenOneFile() {
+    try {
+      const fileContent = await this.fileEditorService.openFile();
+      this.parseAndProcessFile({ name: '', content: JSON.parse(fileContent) });
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  }
+
+  async saveOneFile() {
+    const content = JSON.stringify(this.activeFileContent);
+    const contertForDownload = (this.fileExportService as unknown as RpgMakerFileExportService).getReformatExistingFile(content, "Збережений файл");
+    this.fileEditorService.saveFile(contertForDownload);
   }
 
   async onFileChange(event: Event) {
@@ -102,6 +142,30 @@ export class RpgMarkerQuality {
     this.selectedPageId.set(event.value);
   }
 
+  async onFlow1() {
+    await this.translateToNaturalDialogue();
+
+    const lineIds = this.lineList().filter(line => line.type === LineType.Message || line.type === LineType.Name).map(line => line.id);
+    for (let i = 0; i < lineIds.length; i++) {
+      const id = lineIds[i];
+      console.log('Processing line:', i + 1, '/', lineIds.length);
+      await this.onChooseFromVariants(id);
+    }
+
+    await this.checkTagValidation();
+  }
+
+  async onChooseFromVariants(lineId: number): Promise<void> {
+    const promptBody = PageHelper.trassformToPromptBody(this.lineList(), lineId, true);
+    const prompt = `${chooseVariant}
+      ${promptBody}`
+
+    const result = await this.ollamaService.translate(prompt, Gemma);
+    console.log('result after retry', result);
+
+    PageHelper.saveAsResult(result, this.lineList());
+  }
+
   /**
    * AI actions
    */
@@ -110,20 +174,32 @@ export class RpgMarkerQuality {
    * Перетворює діалоги на більш природні
    */
   async translateToNaturalDialogue(): Promise<void> {
-    const lines = this.eventList()[this.selectedEventId()].getLinesForPage(this.selectedPageId());
+    const lines = this.pageList().flatMap(page => page.list).filter(line => line.type === LineType.Message || line.type === LineType.Name);
     const promptBody = PageHelper.trassformToPromptBody(lines);
     const prompt = `${naturalDialoguePrompt}
     ${promptBody}`
 
-    const result1 = await this.olamaService.translate(prompt, Gemma);
+    const result1 = await this.ollamaService.translate(prompt, Gemma);
     console.log('result1', result1);
 
-    PageHelper.trassformOlamaResult(result1, lines, Gemma);
+    PageHelper.saveAsVariants(result1, lines, Gemma);
 
-    const result2 = await this.olamaService.translate(prompt, UncensoredModel);
+    const result2 = await this.ollamaService.translate(prompt, Gemma, { temperature: 0.2, top_p: 0.6 });
     console.log('result2', result2);
 
-    PageHelper.trassformOlamaResult(result2, lines, UncensoredModel);
+    PageHelper.saveAsVariants(result2, lines, UncensoredModel);
+  }
+
+  async checkTagValidation() {
+    const lines = this.pageList().flatMap(page => page.list).filter(line => line.type === LineType.Message || line.type === LineType.Name);
+    const promptBody = PageHelper.trassformToPromptBody(lines);
+    const prompt = `${selectAndValidateDialogueRowPrompt}
+    ${promptBody}`
+
+    const result1 = await this.ollamaService.translate(prompt, Gemma);
+    console.log('result1', result1);
+
+    PageHelper.saveAsResult(result1, lines);
   }
 
   private readFile(file: File): Promise<{ name: string, content: any }> {
@@ -162,85 +238,12 @@ export class RpgMarkerQuality {
       }
     }
 
-    this.eventList.set(events);
+    this.uploadedList.set(events);
 
     console.log('Event list', events);
   }
-
-
-
-  // async saveFile() {
-  //   if (!this.editedLines().length || !this.selectedEventId()) {
-  //     this.error.set('Немає даних для збереження');
-  //     return;
-  //   }
-
-  //   this.loading.set(true);
-  //   this.error.set(null);
-
-  //   try {
-  //     // 1. Отримуємо всі події, щоб знайти поточну
-  //     const events = this.eventList();
-  //     const currentEventIndex = events.findIndex(e => e.id === this.selectedEventId());
-
-  //     if (currentEventIndex === -1) {
-  //       throw new Error('Поточну подію не знайдено в списку');
-  //     }
-
-  //     // 2. Оновлюємо параметри в поточній події
-  //     const updatedEvent: EventData = {
-  //       ...events[currentEventIndex],
-  //       events: this.editedLines()
-  //     };
-
-  //     // 3. Замінюємо стару подію новою
-  //     const updatedEvents = [...events];
-  //     updatedEvents[currentEventIndex] = updatedEvent;
-  //     this.eventList.set(updatedEvents);
-
-  //     // 4. Парсимо події назад у текст
-  //     const newBuffer = this.exporter.exportToBuffer(updatedEvents);
-
-  //     // 5. Зберігаємо файл через File System Access API
-  //     await this.fileEditor.saveFile(newBuffer.toString());
-
-  //     console.log('✅ Дані успішно збережено');
-  //   } catch (error) {
-  //     this.error.set(this.getErrorMessage(error));
-  //   } finally {
-  //     this.loading.set(false);
-  //   }
-  // }
-
-  // private extractAndSetLines() {
-  //   const currentEventId = this.selectedEventId();
-  //   if (!currentEventId) {
-  //     this.originalLines.set([]);
-  //     this.editedLines.set([]);
-  //     return;
-  //   }
-
-  //   const event = this.eventList().find(e => e.id === currentEventId);
-  //   if (!event) {
-  //     this.originalLines.set([]);
-  //     this.editedLines.set([]);
-  //     return;
-  //   }
-
-  //   this.originalLines.set([...event.events]);
-  //   this.editedLines.set(JSON.parse(JSON.stringify(event.events)));
-  // }
-
-  // onMapSelected(event: Event) {
-  //   const select = event.target as HTMLSelectElement;
-  //   this.selectedMapId.set(select.value);
-  // }
-
-
-
-  // updateResponse(event: Event) {
-  //   const value = (event.target as HTMLTextAreaElement).value;
-  //   const response = this.olamaResponse() || { rowResponse: '', rowIssues: [] };
-  //   this.olamaResponse.set({ ...response, rowResponse: value });
-  // }
 }
+
+/** 
+ * 
+ */

@@ -2,10 +2,23 @@
 
 <div class="container">
     <button (click)="fileInput.click()">Відкрити файл</button>
+    <button (click)="onOpenOneFile()">Відкрити файл для редагування</button>
     <button (click)="saveFile()">Cкачати</button>
     <button [disabled]="!files()?.length" (click)="copyToClipboard()">
         <span class="icon">📋</span> Копіювати {{files()?.length}}
     </button>
+
+    <mat-divider [vertical]="true" />
+
+    <button (click)="onOpenOneFile()">Відкрити файл для редагування</button>
+    <button (click)="saveOneFile()">Зберегти зміни</button>
+    <mat-divider [vertical]="true" />
+    <label class="checkbox">
+        <input type="checkbox" [(ngModel)]="onlyTextFilter" />
+        Тільки з текстом
+    </label>
+    <mat-divider [vertical]="true" />
+    <button (click)="onFlow1()">Сценарій 1</button>
 </div>
 
 @if (eventList().length) {
@@ -13,19 +26,18 @@
     <mat-label>Events</mat-label>
     <mat-select [value]="selectedEventId()" (selectionChange)="onEventSelected($event)">
         @for (event of eventList(); track event.id) {
-        <mat-option [value]="event.id">
+        <mat-option [value]="$index">
             {{ event.id }} - {{ event.name }}
         </mat-option>
         }
     </mat-select>
 </mat-form-field>
-
-@let event = eventList()[selectedEventId()];
+@let event = eventList()?.[selectedEventId()];
 @if (event) {
 <mat-form-field>
-    <mat-label>Pages</mat-label>
+    <mat-label>Pages {{ selectedPageId()+1 + '/' + pageList().length }}</mat-label>
     <mat-select [value]="selectedPageId()" (selectionChange)="onPageSelected($event)">
-        @for (page of event.pages; track $index) {
+        @for (page of pageList(); track $index) {
         <mat-option [value]="$index">
             {{ $index }}
         </mat-option>
@@ -34,7 +46,14 @@
 </mat-form-field>
 }
 <div class="main-layout">
-
+    <label class="checkbox">
+        <input type="checkbox" [formField]="codesForm[EventCommandCode.ShowText]" />
+        Код 101
+    </label>
+    <label class="checkbox">
+        <input type="checkbox" [formField]="codesForm[EventCommandCode.TextLine]" />
+        Код 401
+    </label>
     <div class="actions-panel">
         <div class="panel-header">
             <h3>Швидкі дії та ШІ-корекція</h3>
@@ -78,7 +97,7 @@
                         рядка,
                         щоб текст не вилазив за межі вікна.</p>
                 </div>
-                <button class="action-btn code-btn" disabled>Перевірити теги</button>
+                <button class="action-btn code-btn" (click)="checkTagValidation()">Перевірити теги</button>
             </div>
 
         </div>
@@ -134,11 +153,10 @@
     </div>
 </div>
 
-@let page = event.pages[selectedPageId()];
-@if (page) {
+@if (lineList().length) {
 <div class="main-layout">
     <div class="preview">
-        @for (item of page.list; track $index) {
+        @for (item of lineList(); track $index) {
         <div class="preview-line" [ngClass]="{
           'line-avatar': item.type === LineType.System && item.code === 101 && item.parameters[0] !== '',
           'line-system': item.type === LineType.System,
@@ -168,7 +186,7 @@
         }
     </div>
 
-    <app-rpg-marker-quality-editor [lines]="page.list" />
+    <app-rpg-marker-quality-editor [lines]="lineList()" />
 </div>
 
 }

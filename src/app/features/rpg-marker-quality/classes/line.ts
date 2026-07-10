@@ -1,3 +1,4 @@
+import { EventCommandCode } from "../enums/event-comand-code.enum";
 
 
 export enum LineType {
@@ -17,16 +18,16 @@ export enum LineStatus {
 
 
 export class Line {
-    code: number;
+    code: EventCommandCode;
     indent: number;
     parameters: Array<string | number | boolean>;
-    variants: Record<string, string> = {};
 
     // aditionasl
     id: number;
     type: LineType;
     originalLine: string | number | boolean;
     status: LineStatus;
+    variants: Record<string, string> = {};
 
     constructor({ code, indent, parameters }: { code: number, indent: number, parameters: Array<string | number | boolean> }, id: number, type: LineType) {
         this.code = code;

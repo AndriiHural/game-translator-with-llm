@@ -12,7 +12,11 @@
         <div class="message-container">
             <div class="main-input-row">
                 <span class="label">Msg:</span>
-                <textarea class="input-message input-message-main" rows="2" [(ngModel)]="item.parameters[0]"></textarea>
+                <div class="input-message-wrapper">
+                    <button title="Вибрати з варіантів" (click)="onChooseFromVariants(item.id)">🔄</button>
+                    <textarea class="input-message input-message-main" rows="2"
+                        [(ngModel)]="item.parameters[0]"></textarea>
+                </div>
             </div>
 
             <!-- Блок варіантів перекладу (якщо вони існують в об'єкті) -->
