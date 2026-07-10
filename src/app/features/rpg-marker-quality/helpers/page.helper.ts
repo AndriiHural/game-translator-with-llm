@@ -1,17 +1,18 @@
 import { Gemma, UncensoredModel } from "../../../constants/models";
 import { Line, LineType } from "../classes/line";
+import { Page } from "../classes/page";
 
 export abstract class PageHelper {
     static trassformToPromptBody(lines: Array<Line>, target?: number, fromVariantes?: boolean): string {
         let promptBody = '';
         let currentMessages: Array<Line> = [];
-
         const flushMessages = () => {
             if (currentMessages.length > 0) {
                 const ids = currentMessages.map(m => m.id).join(',');
-                const combinedText = currentMessages.map(m => m.originalLine).join('[br]');
-                const valiant2 = currentMessages.map(m => m.variants[Gemma]).join('[br]');
-                const valiant3 = currentMessages.map(m => m.variants[UncensoredModel]).join('[br]');
+                console.log('ids', ids);
+                const combinedText = currentMessages.map(m => m.parameters()[0]).join('[br]');
+                const valiant2 = currentMessages.map(m => m.variants()[Gemma] || '').join('[br]');
+                const valiant3 = currentMessages.map(m => m.variants()[UncensoredModel] || '').join('[br]');
                 const isCurrentTarget = currentMessages.find(item => item.id === target);
 
                 if (fromVariantes && isCurrentTarget) {
@@ -31,14 +32,14 @@ export abstract class PageHelper {
         };
 
         lines.forEach(line => {
-            if (line.type === LineType.Name) {
+            if (line.type() === LineType.Name) {
                 // Перед тим як додати ім'я, зливаємо накопичені повідомлення (якщо вони є)
                 flushMessages();
                 if (line.id === target) {
                     promptBody += `**TARGET ROW**\n`;
                 }
-                promptBody += `${line.id}|Name: ${line.originalLine}\n`;
-            } else if (line.type === LineType.Message) {
+                promptBody += `${line.id}|Name: ${line.parameters()[0]}\n`;
+            } else if ([LineType.Message, LineType.Other].includes(line.type())) {
                 // Накопичуємо повідомлення, що йдуть підряд
                 currentMessages.push(line);
             }
@@ -75,14 +76,14 @@ export abstract class PageHelper {
                     if (line) {
                         // Якщо модель чомусь повернула менше реплік, ніж було, 
                         // беремо порожній рядок як фолбек
-                        line.variants[model] = textVariants[index] !== undefined ? textVariants[index] : '';
+                        line.variants.update(prev => ({ ...prev, [model]: textVariants[index] !== undefined ? textVariants[index] : '' }));
                     }
                 });
             } else {
                 // Якщо це поодинокий рядок (наприклад, Name або одиночний Message)
                 const line = lines.find(l => l.id === lineIds[0]);
                 if (line) {
-                    line.variants[model] = lineText;
+                    line.variants.update(prev => ({ ...prev, [model]: lineText }));
                 }
             }
         });
@@ -90,7 +91,7 @@ export abstract class PageHelper {
         return lines;
     }
 
-    static saveAsResult(result: string, lines: Line[]) {
+    static saveAsResult(result: string, lines: Line[], page?: Page) {
         const splitted = result.split('\n');
 
         splitted.forEach(row => {
@@ -115,18 +116,53 @@ export abstract class PageHelper {
                     if (line) {
                         // Якщо модель чомусь повернула менше реплік, ніж було, 
                         // беремо порожній рядок як фолбек
-                        line.parameters[0] = textVariants[index] !== undefined ? textVariants[index] : '';
+                        line.parameters.set([textVariants[index] !== undefined ? textVariants[0] : '']);
+                        textVariants.shift();
                     }
                 });
+                console.log("textVariants after update exist lines", textVariants);
+                if (lineIds.length > 0) {
+                    if (!page) {
+                        throw new Error("Error while mapping lines. Page is null or undefined");
+                    }
+                    textVariants.forEach(text => page.addLine(text, lineIds[lineIds.length - 1]));
+                }
             } else {
                 // Якщо це поодинокий рядок (наприклад, Name або одиночний Message)
                 const line = lines.find(l => l.id === lineIds[0]);
                 if (line) {
-                    line.parameters[0] = lineText;
+                    line.parameters.set([lineText]);
                 }
             }
         });
 
         return lines;
+    }
+
+    static changeLinesType(data: Array<{ id: number, type: string, line: string, isChanged: boolean }>, lines: Array<Line>): Array<Line> {
+        const changed = data.filter(item => item.isChanged);
+
+        changed.forEach(item => {
+            const line = lines.find(l => l.id === item.id);
+            if (line) {
+                line.type.set(item.type as LineType);
+            }
+        });
+
+        return lines;
+    }
+
+    static getLinesForTypeCheck(lines: Array<Line>) {
+        const formatted = lines.map(line => {
+            const newLine: { id: number, type: string, line: string } = {
+                id: line.id,
+                type: line.type(),
+                line: line.parameters()[0] as string
+            };
+            return newLine;
+        });
+
+
+        return JSON.stringify(formatted);
     }
 }

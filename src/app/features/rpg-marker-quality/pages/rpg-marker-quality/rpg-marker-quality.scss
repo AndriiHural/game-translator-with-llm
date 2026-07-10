@@ -43,6 +43,14 @@ mat-form-field {
     margin-top: 20px;
 }
 
+.preview-layout {
+    grid-template-columns: 1fr 1fr 2fr;
+}
+
+.actions-layout {
+    grid-template-columns: 2fr 1fr 2fr;
+}
+
 /* СЕКЦІЯ PREVIEW (Імітація гри) */
 .preview {
     background: #111116;

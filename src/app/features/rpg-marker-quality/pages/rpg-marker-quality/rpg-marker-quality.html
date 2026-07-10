@@ -1,10 +1,12 @@
 <input #fileInput type="file" multiple (change)="onFileChange($event)" style="display: none;" />
+<input #glossaryFileInput type="file" multiple (change)="setGlossary($event)" style="display: none;" />
+
 
 <div class="container">
     <button (click)="fileInput.click()">Відкрити файл</button>
     <button (click)="onOpenOneFile()">Відкрити файл для редагування</button>
     <button (click)="saveFile()">Cкачати</button>
-    <button [disabled]="!files()?.length" (click)="copyToClipboard()">
+    <button (click)="copyToClipboard()">
         <span class="icon">📋</span> Копіювати {{files()?.length}}
     </button>
 
@@ -12,13 +14,20 @@
 
     <button (click)="onOpenOneFile()">Відкрити файл для редагування</button>
     <button (click)="saveOneFile()">Зберегти зміни</button>
+
     <mat-divider [vertical]="true" />
+
     <label class="checkbox">
         <input type="checkbox" [(ngModel)]="onlyTextFilter" />
         Тільки з текстом
     </label>
+
     <mat-divider [vertical]="true" />
-    <button (click)="onFlow1()">Сценарій 1</button>
+
+    <button [disabled]="isFlow1Procesing() || !glossaryFileContent()" (click)="onFlow1()">Сценарій 1</button>
+    <mat-divider [vertical]="true" />
+
+    <button [disabled]="glossaryFileContent()" (click)="onUploadGlossary()">Завантажити словник</button>
 </div>
 
 @if (eventList().length) {
@@ -45,15 +54,18 @@
     </mat-select>
 </mat-form-field>
 }
-<div class="main-layout">
-    <label class="checkbox">
-        <input type="checkbox" [formField]="codesForm[EventCommandCode.ShowText]" />
-        Код 101
-    </label>
-    <label class="checkbox">
-        <input type="checkbox" [formField]="codesForm[EventCommandCode.TextLine]" />
-        Код 401
-    </label>
+
+<label class="checkbox">
+    <input type="checkbox" [formField]="codesForm[EventCommandCode.ShowText]" />
+    Код 101
+</label>
+<label class="checkbox">
+    <input type="checkbox" [formField]="codesForm[EventCommandCode.TextLine]" />
+    Код 401
+</label>
+
+<div class="main-layout actions-layout">
+
     <div class="actions-panel">
         <div class="panel-header">
             <h3>Швидкі дії та ШІ-корекція</h3>
@@ -68,7 +80,7 @@
                         (напр.,
                         "наробив" ➔ "наробила").</p>
                 </div>
-                <button class="action-btn secondary-btn">Змінити рід</button>
+                <button class="action-btn secondary-btn" disabled>Змінити рід</button>
             </div>
 
             <div class="action-item">
@@ -77,17 +89,7 @@
                     <p class="action-description">Зробити репліку більш експресивною відповідно до поточної сцени (гнів,
                         радість, сум).</p>
                 </div>
-                <button class="action-btn magic-btn">Оживити</button>
-            </div>
-
-            <div class="action-item">
-                <div class="action-info">
-                    <span class="action-title">Природний діалог</span>
-                    <p class="action-description">Прибрати кальку з англійської/японської, зробити фразу більш звичною
-                        для
-                        українського гравця.</p>
-                </div>
-                <button class="action-btn" (click)="translateToNaturalDialogue()">Художній переклад</button>
+                <button class="action-btn magic-btn" (click)="applySceneEmotionsWithAnalyse()">Оживити</button>
             </div>
 
             <div class="action-item">
@@ -100,8 +102,36 @@
                 <button class="action-btn code-btn" (click)="checkTagValidation()">Перевірити теги</button>
             </div>
 
+            <div class="action-item">
+                <div class="action-info">
+                    <span class="action-title">Аналіз контексту сцени</span>
+                    <p class="action-description">Дозволяє редактору зрозуміти сюжетний контекст, емоції та відносини
+                        між персонажами в поточній сцені, що допоможе уникнути стилістичних помилок при перекладі.</p>
+                </div>
+                <button class="action-btn code-btn" (click)="analyzeScene()">Проаналізувати сцену</button>
+            </div>
+
+            <div class="action-item">
+                <div class="action-info">
+                    <span class="action-title">Природний діалог</span>
+                    <p class="action-description">Прибрати кальку з англійської/японської, зробити фразу більш звичною
+                        для
+                        українського гравця.</p>
+                </div>
+                <button class="action-btn" (click)="translateToNaturalDialogue()">Художній переклад</button>
+            </div>
+
         </div>
     </div>
+
+    <app-rpg-marker-quality-status-bar [isFlow1Procesing]="isFlow1Procesing()"
+        [isLineTypesValidationProcessing]="isLineTypesValidationProcessing()"
+        [isDialogueTranslationProcessing]="isDialogueTranslationProcessing()"
+        [isGlossaryOnlyProcessing]="isGlossaryOnlyProcessing()"
+        [isSystemMessagesProcessing]="isSystemMessagesProcessing()"
+        [isChooseFromVariantsProcessing]="isChooseFromVariantsProcessing()"
+        [isChooseSystemVariantProcessing]="isChooseSystemVariantProcessing()">
+    </app-rpg-marker-quality-status-bar>
 
     <div class="actions-panel">
         <div class="panel-header">
@@ -112,41 +142,47 @@
         <div class="actions-list">
             <div class="action-item">
                 <div class="action-info">
-                    <span class="action-title">Фемінітиви / Зміна роду</span>
-                    <p class="action-description">Адаптувати закінчення дієслів та прикметників для жіночого роду
-                        (напр.,
-                        "наробив" ➔ "наробила").</p>
+                    <span class="action-title">Використовуючи глосарій</span>
+                    <p class="action-description">Замінює слова за допомогою глосарія</p>
                 </div>
-                <button class="action-btn secondary-btn">Змінити рід</button>
+                <div>
+                    <button class="action-btn secondary-btn" (click)="translateWithGlossary()">Змінити рід з
+                        глосарієм</button>
+                </div>
             </div>
 
             <div class="action-item">
                 <div class="action-info">
-                    <span class="action-title">Додати емоційності (ШІ)</span>
-                    <p class="action-description">Зробити репліку більш експресивною відповідно до поточної сцени (гнів,
-                        радість, сум).</p>
+                    <span class="action-title">Редагувати системне повідомлення</span>
+                    <p class="action-description">Змінити звернення в повідомленях (ти/ви). Змінити на більш
+                        інформативний/системний стиль</p>
                 </div>
-                <button class="action-btn magic-btn">Оживити</button>
+                <button class="action-btn magic-btn" (click)="editSystemMessage()">Редагувати системне
+                    повідомлення</button>
             </div>
 
             <div class="action-item">
                 <div class="action-info">
-                    <span class="action-title">Природний діалог</span>
-                    <p class="action-description">Прибрати кальку з англійської/японської, зробити фразу більш звичною
-                        для
-                        українського гравця.</p>
+                    <span class="action-title">Перевірка типу повідомлень</span>
+                    <p class="action-description">Виправлення помилок у типах повідомлень. Наприклад, якщо повідомлення
+                        має бути системним, а не звичайним, чи це не повідомлення а імя персонажа</p>
                 </div>
-                <button class="action-btn">Художній переклад</button>
+                <button class="action-btn" (click)="checkLineTypes()">Перевірити типи повідомлень</button>
             </div>
 
             <div class="action-item">
                 <div class="action-info">
                     <span class="action-title">Перевірити обмеження RPG Maker</span>
-                    <p class="action-description">Валідація спеціальних тегів (`\V[n]`, `\N[n]`, `\C[n]`) та довжини
-                        рядка,
-                        щоб текст не вилазив за межі вікна.</p>
+                    <p class="action-description">Валідація спеціальних тегів (`\V[n]`, `\N[n]`, `\C[n]`).</p>
                 </div>
-                <button class="action-btn code-btn" disabled>Перевірити теги</button>
+                <button class="action-btn code-btn" (click)="checkTagValidation()">Перевірити теги</button>
+            </div>
+            <div class="action-item">
+                <div class="action-info">
+                    <span class="action-title">Примусова переформатація тексту</span>
+                    <p class="action-description">Переформатація тексту, щоб він не вилазив за межі вікна.</p>
+                </div>
+                <button class="action-btn code-btn" (click)="fitTextToLimits()">Переформатувати</button>
             </div>
 
         </div>
@@ -154,32 +190,63 @@
 </div>
 
 @if (lineList().length) {
-<div class="main-layout">
+<div class="main-layout preview-layout">
     <div class="preview">
         @for (item of lineList(); track $index) {
         <div class="preview-line" [ngClass]="{
-          'line-avatar': item.type === LineType.System && item.code === 101 && item.parameters[0] !== '',
-          'line-system': item.type === LineType.System,
-          'line-name': item.type === LineType.Name,
-          'line-message': item.type === LineType.Message,
-          'line-other': item.type === LineType.Other
+          'line-avatar': item.type() === LineType.System && item.code === 101 && item.parameters()[0] !== '',
+          'line-system': item.type() === LineType.System,
+          'line-name': item.type() === LineType.Name,
+          'line-message': item.type() === LineType.Message,
+          'line-other': item.type() === LineType.Other
       }">
-            @switch(item.type) {
+            @switch(item.type()) {
             @case(LineType.System) {
-            @if (item.code === 101 && item.parameters[0] !== '') {
+            @if (item.code === 101 && item.parameters()[0] !== '') {
             <div class="avatar"></div>
             } @else {
-            {{item.parameters[0]}}
+            {{item.parameters()[0]}}
             }
             }
             @case(LineType.Name) {
-            {{item.parameters[0]}}
+            {{item.parameters()[0]}}
             }
             @case(LineType.Message) {
-            {{item.parameters[0]}}
+            {{item.parameters()[0]}}
             }
             @case(LineType.Other) {
-            {{item.parameters[0]}}
+            {{item.parameters()[0]}}
+            }
+            }
+        </div>
+        }
+    </div>
+    <div class="preview">
+        @for (item of lineList(); track $index) {
+        @let originalLine = item.original.line;
+        <div class="preview-line" [ngClass]="{
+          'line-avatar': item.original.type === LineType.System && item.code === 101 && originalLine !== '',
+          'line-system': item.original.type === LineType.System,
+          'line-name': item.original.type === LineType.Name,
+          'line-message': item.original.type === LineType.Message,
+          'line-other': item.original.type === LineType.Other
+      }">
+            @switch(item.original.type) {
+            @case(LineType.System) {
+            @if (item.code === 101 && originalLine !== '') {
+            <div class="avatar"></div>
+            } @else {
+            {{originalLine}}
+            }
+            }
+            @case(LineType.Name) {
+            {{originalLine}}
+            }
+            @case(LineType.Message) {
+            {{originalLine}}
+            }
+            @case(LineType.Other) {
+            {{originalLine}}
             }
             }
         </div>

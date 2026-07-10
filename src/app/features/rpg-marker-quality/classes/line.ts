@@ -1,4 +1,6 @@
+import { signal, WritableSignal } from "@angular/core";
 import { EventCommandCode } from "../enums/event-comand-code.enum";
+import { S } from "@angular/cdk/keycodes";
 
 
 export enum LineType {
@@ -16,27 +18,31 @@ export enum LineStatus {
     Done
 }
 
+export interface ILine { code: number, line: string, type: LineType }
+
 
 export class Line {
     code: EventCommandCode;
     indent: number;
-    parameters: Array<string | number | boolean>;
+    parameters: WritableSignal<Array<string | number | boolean>>;
 
     // aditionasl
     id: number;
-    type: LineType;
-    originalLine: string | number | boolean;
+    parentId: string;
+    type: WritableSignal<LineType>;
+    original: ILine;
     status: LineStatus;
-    variants: Record<string, string> = {};
+    variants: WritableSignal<Record<string, string>> = signal({});
 
-    constructor({ code, indent, parameters }: { code: number, indent: number, parameters: Array<string | number | boolean> }, id: number, type: LineType) {
+    constructor({ code, indent, parameters }: { code: number, indent: number, parameters: Array<string | number | boolean> }, id: number, type: LineType, parentId: string) {
         this.code = code;
         this.indent = indent;
-        this.parameters = parameters;
+        this.parameters = signal(parameters);
 
         this.id = id;
-        this.type = type;
-        this.originalLine = parameters[0];
+        this.parentId = parentId;
+        this.type = signal(type);
+        this.original = { code, line: parameters[0] as string, type };
         this.status = LineStatus.New;
     }
 
@@ -44,7 +50,7 @@ export class Line {
         return {
             code: this.code,
             indent: this.indent,
-            parameters: this.parameters
+            parameters: this.parameters()
         };
     }
 }

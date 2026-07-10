@@ -1,4 +1,5 @@
 import { Line, LineType } from "./line";
+import { Page } from "./page";
 
 export enum EventStatus {
     New = 0,
@@ -12,7 +13,7 @@ export class SceneEvent {
     id: number;
     name: string;
     note: string;
-    pages: Array<{ list: Array<Line> }>;
+    pages: Array<Page>;
     x: number;
     y: number;
 
@@ -20,7 +21,7 @@ export class SceneEvent {
     status: EventStatus;
     originalEvent: SceneEvent | null;
 
-    constructor(event: SceneEvent | null, status: EventStatus = EventStatus.New) {
+    constructor(event: any | null, status: EventStatus = EventStatus.New) {
         this.originalEvent = event;
 
         if (event === null) {
@@ -58,46 +59,14 @@ export class SceneEvent {
     }
 
     getLinesForPage(pageNumber: number): Array<Line> {
-        return this.pages[pageNumber].list.filter(line => line.type === LineType.Message || line.type === LineType.Name);
+        return this.pages[pageNumber].list.filter(line => line.type() === LineType.Message || line.type() === LineType.Name);
     }
 
-    private mapLines(pages: Array<{ list: Array<Line> }>,): Array<{ list: Array<Line> }> {
+    private mapLines(pages: Array<{ list: Array<any> }>,): Array<Page> {
         if (!pages) {
             return [];
         }
 
-        return pages.map(page => {
-            let nextType = LineType.Other;
-            let messageCount = 0;
-
-            return {
-                ...page,
-                list: page.list.map((line, index) => {
-                    if (line.code === 101) {
-                        messageCount = 0;
-                        nextType = line.parameters.at(0) === '' ? LineType.Other : LineType.Name;
-                        return new Line(line, index, LineType.System);
-                    }
-
-                    if (line.code === 401) {
-                        const type = nextType;
-                        messageCount++;
-
-                        if (messageCount === 4) {
-                            nextType = LineType.Other;
-                            messageCount = 0;
-                        } else {
-                            nextType = LineType.Message;
-                        }
-
-                        return new Line(line, index, type);
-                    }
-
-                    messageCount = 0;
-
-                    return new Line(line, index, LineType.System);
-                })
-            };
-        });
+        return pages.map((page, index) => new Page(page, this.id + '_' + index));
     }
 }

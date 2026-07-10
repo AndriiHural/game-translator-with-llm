@@ -1,0 +1,90 @@
+<div class="progress-panel">
+    <div class="panel-header">
+        <h3>Статус обробки тексту</h3>
+        @if (isFlow1Procesing()) {
+        <div class="global-spinner"></div>
+        }
+    </div>
+
+    <div class="steps-timeline">
+
+        <div class="step-item" [class.processing]="isFlow1Procesing() && isLineTypesValidationProcessing()"
+            [class.completed]="isFlow1Procesing() && !isLineTypesValidationProcessing()"
+            [class.pending]="!isFlow1Procesing() && !isLineTypesValidationProcessing()">
+            <div class="step-indicator">
+                <div class="spinner"></div>
+                <span class="checkmark">✓</span>
+                <div class="dot"></div>
+            </div>
+            <div class="step-content">
+                <span class="step-label">Валідація типів рядків</span>
+            </div>
+        </div>
+
+        <div class="step-item" [class.processing]="isFlow1Procesing() && isDialogueTranslationProcessing()"
+            [class.completed]="isFlow1Procesing() && !isDialogueTranslationProcessing() && !isLineTypesValidationProcessing()"
+            [class.pending]="isLineTypesValidationProcessing()">
+            <div class="step-indicator">
+                <div class="spinner"></div>
+                <span class="checkmark">✓</span>
+                <div class="dot"></div>
+            </div>
+            <div class="step-content">
+                <span class="step-label">Художній переклад діалогів</span>
+            </div>
+        </div>
+
+        <div class="step-item" [class.processing]="isFlow1Procesing() && isSystemMessagesProcessing()"
+            [class.completed]="isFlow1Procesing() && !isSystemMessagesProcessing() && !isDialogueTranslationProcessing()"
+            [class.pending]="isDialogueTranslationProcessing() || isLineTypesValidationProcessing()">
+            <div class="step-indicator">
+                <div class="spinner"></div>
+                <span class="checkmark">✓</span>
+                <div class="dot"></div>
+            </div>
+            <div class="step-content">
+                <span class="step-label">Обробка системних повідомлень</span>
+            </div>
+        </div>
+
+        <div class="step-item" [class.processing]="isFlow1Procesing() && isChooseFromVariantsProcessing()"
+            [class.completed]="isFlow1Procesing() && !isChooseFromVariantsProcessing() && !isSystemMessagesProcessing()"
+            [class.pending]="isSystemMessagesProcessing() || isDialogueTranslationProcessing() || isLineTypesValidationProcessing()">
+            <div class="step-indicator">
+                <div class="spinner"></div>
+                <span class="checkmark">✓</span>
+                <div class="dot"></div>
+            </div>
+            <div class="step-content">
+                <span class="step-label">Генерація та вибір варіантів ШІ</span>
+            </div>
+        </div>
+
+        <div class="step-item" [class.processing]="isFlow1Procesing() && isChooseSystemVariantProcessing()"
+            [class.completed]="isFlow1Procesing() && !isChooseSystemVariantProcessing() && !isChooseFromVariantsProcessing()"
+            [class.pending]="isChooseFromVariantsProcessing() || isSystemMessagesProcessing() || isDialogueTranslationProcessing() || isLineTypesValidationProcessing()">
+            <div class="step-indicator">
+                <div class="spinner"></div>
+                <span class="checkmark">✓</span>
+                <div class="dot"></div>
+            </div>
+            <div class="step-content">
+                <span class="step-label">Валідація тегів RPG Maker</span>
+            </div>
+        </div>
+
+        <div class="step-item" [class.processing]="isFlow1Procesing() && isGlossaryOnlyProcessing()"
+            [class.completed]="!isFlow1Procesing() && !isGlossaryOnlyProcessing()"
+            [class.pending]="isChooseSystemVariantProcessing() || isChooseFromVariantsProcessing() || isSystemMessagesProcessing() || isDialogueTranslationProcessing() || isLineTypesValidationProcessing()">
+            <div class="step-indicator">
+                <div class="spinner"></div>
+                <span class="checkmark">✓</span>
+                <div class="dot"></div>
+            </div>
+            <div class="step-content">
+                <span class="step-label">Фіналізація перекладу за глосарієм</span>
+            </div>
+        </div>
+
+    </div>
+</div>
